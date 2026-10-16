@@ -34,6 +34,10 @@ import java.util.concurrent.Executors;
 
 public final class TwitchChatFeed {
     private static final long MESSAGE_LIFETIME = 15_000L;
+    private static final int LINE_HEIGHT = 12;
+    private static final int BADGE_SIZE = 8;
+    private static final int BADGE_GAP = 2;
+    private static final int EMOTE_HEIGHT = 10;
     private final Deque<Message> messages = new ArrayDeque<>();
     private final Map<String, Emote> emotes = new ConcurrentHashMap<>();
     private final Map<String, Badge> badges = new ConcurrentHashMap<>();
@@ -66,16 +70,16 @@ public final class TwitchChatFeed {
         }
         int maximum = chatOpen ? 12 : 6;
         if (visible.size() > maximum) visible = visible.subList(visible.size() - maximum, visible.size());
-        int y = client.getWindow().getScaledHeight() - 44 - visible.size() * 14;
+        int y = client.getWindow().getScaledHeight() - 44 - visible.size() * LINE_HEIGHT;
         int panelWidth = 0;
         for (Message message : visible) panelWidth = Math.max(panelWidth, measureLine(client, message));
         if (!visible.isEmpty()) {
-            context.fill(2, y - 3, Math.min(client.getWindow().getScaledWidth() - 2, panelWidth + 9),
-                    y + visible.size() * 14, 0x78000000);
+            context.fill(2, y - 2, Math.min(client.getWindow().getScaledWidth() - 2, panelWidth + 8),
+                    y + visible.size() * LINE_HEIGHT - 1, 0x70000000);
         }
         for (Message message : visible) {
             renderLine(context, client, message, 4, y);
-            y += 14;
+            y += LINE_HEIGHT;
         }
     }
 
@@ -115,8 +119,9 @@ public final class TwitchChatFeed {
             if (badge == null) continue;
             ensureBadgeTexture(badge);
             if (badge.texture != null) {
-                context.drawTexture(badge.texture, x, y - 1, 0, 0, 10, 10, badge.width, badge.height);
-                x += 12;
+                context.drawTexture(badge.texture, x, y + 1, 0, 0, BADGE_SIZE, BADGE_SIZE,
+                        badge.width, badge.height);
+                x += BADGE_SIZE + BADGE_GAP;
             }
         }
         context.drawTextWithShadow(client.textRenderer, message.user, x, y, message.color);
@@ -135,8 +140,10 @@ public final class TwitchChatFeed {
             }
             ensureTexture(emote);
             Identifier texture = emote.texture;
-            int emoteWidth = Math.max(10, Math.min(28, Math.round(12.0F * emote.width / emote.height)));
-            if (texture != null) context.drawTexture(texture, x, y - 2, 0, 0, emoteWidth, 12, emote.width, emote.height);
+            int emoteWidth = Math.max(8, Math.min(24,
+                    Math.round((float) EMOTE_HEIGHT * emote.width / emote.height)));
+            if (texture != null) context.drawTexture(texture, x, y, 0, 0, emoteWidth, EMOTE_HEIGHT,
+                    emote.width, emote.height);
             else context.drawTextWithShadow(client.textRenderer, word, x, y, 0xFFB9A3FF);
             x += (texture != null ? emoteWidth : client.textRenderer.getWidth(word)) + 3;
         }
@@ -144,11 +151,14 @@ public final class TwitchChatFeed {
 
     private int measureLine(MinecraftClient client, Message message) {
         int width = client.textRenderer.getWidth(message.user + ": ");
-        for (BadgeRef reference : message.badges) if (badges.containsKey(reference.key())) width += 12;
+        for (BadgeRef reference : message.badges) {
+            if (badges.containsKey(reference.key())) width += BADGE_SIZE + BADGE_GAP;
+        }
         for (String word : message.text.split(" ")) {
             Emote emote = emotes.get(word);
             width += emote == null ? client.textRenderer.getWidth(word + " ")
-                    : Math.max(10, Math.min(28, Math.round(12.0F * emote.width / emote.height))) + 3;
+                    : Math.max(8, Math.min(24,
+                            Math.round((float) EMOTE_HEIGHT * emote.width / emote.height))) + 3;
         }
         return width;
     }
