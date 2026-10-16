@@ -224,6 +224,7 @@ public final class ChatCraftDashboardServer {
             config.keepRunningUnfocused = bool(request, "keepRunningUnfocused", config.keepRunningUnfocused);
             config.followMobEnabled = bool(request, "followMobEnabled", config.followMobEnabled);
             config.subTntEnabled = bool(request, "subTntEnabled", config.subTntEnabled);
+            config.privilegedCommandsEnabled = bool(request, "privilegedCommandsEnabled", config.privilegedCommandsEnabled);
             config.movementDurationTicks = integer(request, "movementDurationTicks", config.movementDurationTicks);
             config.cameraStepDegrees = decimal(request, "cameraStepDegrees", config.cameraStepDegrees);
             config.whitelist = strings(request, "whitelist");
@@ -436,6 +437,7 @@ public final class ChatCraftDashboardServer {
         settings.put("keepRunningUnfocused", config.keepRunningUnfocused);
         settings.put("followMobEnabled", config.followMobEnabled);
         settings.put("subTntEnabled", config.subTntEnabled);
+        settings.put("privilegedCommandsEnabled", config.privilegedCommandsEnabled);
         settings.put("movementDurationTicks", config.movementDurationTicks);
         settings.put("cameraStepDegrees", config.cameraStepDegrees);
         settings.put("whitelist", config.whitelist);

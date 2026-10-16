@@ -163,6 +163,7 @@ public final class InputController {
             case SLOT_SHIFT -> { return clickSlot(client, action.argument(), 0, SlotActionType.QUICK_MOVE); }
             case FOLLOW_EVENT -> { return runFollowEvent(client, action.argument()); }
             case SUB_EVENT -> { return runSubEvent(client, action.argument()); }
+            case MINECRAFT_COMMAND -> { return runMinecraftCommand(client, action.argument()); }
             default -> { }
         }
         return "executed";
@@ -184,6 +185,12 @@ public final class InputController {
         client.player.networkHandler.sendChatCommand(
                 "playsound minecraft:entity.firework_rocket.blast master @s ~5 ~1 ~ 1 1");
         return "TNT and firework requested for subscriber " + safeName(username);
+    }
+
+    private String runMinecraftCommand(MinecraftClient client, String command) {
+        if (client.player.networkHandler == null || client.world == null) return "skipped: no world is open";
+        client.player.networkHandler.sendChatCommand(command);
+        return "sent /" + command;
     }
 
     private static String safeName(String username) {

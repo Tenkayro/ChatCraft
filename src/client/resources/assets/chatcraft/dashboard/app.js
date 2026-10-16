@@ -61,6 +61,7 @@ function fillSettings(settings) {
   $("settingKeepRunning").checked = settings.keepRunningUnfocused;
   $("settingFollowMob").checked = settings.followMobEnabled;
   $("settingSubTnt").checked = settings.subTntEnabled;
+  $("settingPrivilegedCommands").checked = settings.privilegedCommandsEnabled;
 }
 
 function nameList(value) {
@@ -209,7 +210,8 @@ $("settingsForm").addEventListener("submit", async (event) => {
         autoReconnect: $("settingAutoReconnect").checked,
         keepRunningUnfocused: $("settingKeepRunning").checked,
         followMobEnabled: $("settingFollowMob").checked,
-        subTntEnabled: $("settingSubTnt").checked
+        subTntEnabled: $("settingSubTnt").checked,
+        privilegedCommandsEnabled: $("settingPrivilegedCommands").checked
       })
     });
     fillSettings(data.settings);

@@ -34,6 +34,7 @@ public final class ChatCraftConfig {
     public boolean keepRunningUnfocused = true;
     public boolean followMobEnabled = true;
     public boolean subTntEnabled = true;
+    public boolean privilegedCommandsEnabled = true;
     public int movementDurationTicks = 10;
     public float cameraStepDegrees = 30.0f;
     public List<String> whitelist = new ArrayList<>();

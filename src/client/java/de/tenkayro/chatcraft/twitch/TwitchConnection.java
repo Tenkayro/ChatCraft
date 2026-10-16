@@ -154,7 +154,19 @@ public final class TwitchConnection {
         activity.add("chat", user, message, "", "received");
         chatFeed.accept(user, message, parseColor(userColor), tags.getOrDefault("badges", ""),
                 tags.getOrDefault("room-id", ""));
+        if (CommandService.isMinecraftCommand(message)) {
+            commands.submitMinecraftCommand(user, message, isBroadcasterOrModerator(user, tags));
+            return;
+        }
         commands.submit(user, message, false);
+    }
+
+    private static boolean isBroadcasterOrModerator(String user, Map<String, String> tags) {
+        String badges = tags.getOrDefault("badges", "");
+        boolean broadcaster = badges.contains("broadcaster/")
+                || normalizeUsername(user).equals(normalizeUsername(ChatCraftConfig.get().username));
+        boolean moderator = "1".equals(tags.get("mod")) || badges.contains("moderator/");
+        return broadcaster || moderator;
     }
 
     private void handleUserNotice(Map<String, String> tags) {
