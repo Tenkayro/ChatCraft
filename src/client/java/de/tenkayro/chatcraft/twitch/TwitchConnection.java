@@ -152,8 +152,7 @@ public final class TwitchConnection {
         }
         String message = CommandParser.sanitizeMessage(line.substring(messageStart + 2));
         activity.add("chat", user, message, "", "received");
-        chatFeed.accept(user, message, parseColor(userColor), tags.getOrDefault("badges", ""),
-                tags.getOrDefault("room-id", ""));
+        chatFeed.accept(user, message, parseColor(userColor));
         if (CommandService.isMinecraftCommand(message)) {
             commands.submitMinecraftCommand(user, message, isBroadcasterOrModerator(user, tags));
             return;

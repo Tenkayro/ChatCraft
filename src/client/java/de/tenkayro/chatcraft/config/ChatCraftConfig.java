@@ -32,7 +32,7 @@ public final class ChatCraftConfig {
     public boolean autoConnect = false;
     public boolean autoReconnect = true;
     public boolean keepRunningUnfocused = true;
-    public boolean followMobEnabled = true;
+    public boolean followFireworkEnabled = true;
     public boolean subTntEnabled = true;
     public boolean privilegedCommandsEnabled = true;
     public int movementDurationTicks = 10;

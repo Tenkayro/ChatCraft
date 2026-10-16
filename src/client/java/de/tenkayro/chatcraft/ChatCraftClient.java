@@ -16,7 +16,6 @@ import de.tenkayro.chatcraft.twitch.TwitchChatFeed;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -42,8 +41,9 @@ public final class ChatCraftClient implements ClientModInitializer {
         ChatCraftConfig config = ChatCraftConfig.get();
         activity = new ActivityLog();
         queue = new ActionQueue();
-        commands = new CommandService(new CommandParser(), queue, activity);
-        chatFeed = new TwitchChatFeed();
+        CommandParser parser = new CommandParser();
+        commands = new CommandService(parser, queue, activity);
+        chatFeed = new TwitchChatFeed(parser);
         eventSub = new TwitchEventSub(queue, activity);
         twitch = new TwitchConnection(commands, queue, activity, chatFeed, eventSub);
         input = new InputController(queue, activity);
@@ -52,7 +52,6 @@ public final class ChatCraftClient implements ClientModInitializer {
         dashboard.start();
         ClientTickEvents.END_CLIENT_TICK.register(input::tick);
         ClientTickEvents.END_CLIENT_TICK.register(backgroundMode::tick);
-        HudRenderCallback.EVENT.register(chatFeed::render);
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             if (client.player != null) client.player.sendMessage(dashboardMessage(), false);
         });

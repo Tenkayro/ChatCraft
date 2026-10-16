@@ -30,6 +30,8 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
+import net.minecraft.particle.ParticleTypes;
+import net.minecraft.sound.SoundEvents;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -170,10 +172,20 @@ public final class InputController {
     }
 
     private String runFollowEvent(MinecraftClient client, String username) {
-        if (!ChatCraftConfig.get().followMobEnabled) return "skipped: follow event disabled";
-        if (client.player.networkHandler == null || client.world == null) return "skipped: no world is open";
-        client.player.networkHandler.sendChatCommand("summon minecraft:zombie ~5 ~ ~");
-        return "spawn requested for follower " + safeName(username);
+        if (!ChatCraftConfig.get().followFireworkEnabled) return "skipped: follow event disabled";
+        if (client.player == null || client.world == null) return "skipped: no world is open";
+        Vec3d origin = client.player.getPos().add(0.0, 2.0, 0.0);
+        for (int index = 0; index < 120; index++) {
+            double angle = Math.random() * Math.PI * 2.0;
+            double vertical = Math.random() * 2.0 - 1.0;
+            double horizontal = Math.sqrt(Math.max(0.0, 1.0 - vertical * vertical));
+            double speed = 0.08 + Math.random() * 0.16;
+            client.world.addParticle(ParticleTypes.FIREWORK, origin.x, origin.y, origin.z,
+                    Math.cos(angle) * horizontal * speed, vertical * speed, Math.sin(angle) * horizontal * speed);
+        }
+        client.player.playSound(SoundEvents.ENTITY_FIREWORK_ROCKET_LAUNCH, 1.0F, 1.0F);
+        client.player.playSound(SoundEvents.ENTITY_FIREWORK_ROCKET_BLAST, 1.0F, 1.0F);
+        return "firework fired for follower " + safeName(username);
     }
 
     private String runSubEvent(MinecraftClient client, String username) {

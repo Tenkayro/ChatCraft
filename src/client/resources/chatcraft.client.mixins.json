@@ -4,6 +4,7 @@
   "refmap": "client-chatcraft-refmap.json",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "AnimatedResultButtonAccessor",
     "HandledScreenMixin",
     "MinecraftClientInvoker",
     "RecipeBookResultsAccessor",

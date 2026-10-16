@@ -168,9 +168,9 @@ public final class TwitchEventSub {
     }
 
     private void enqueueFollow(String user, boolean test) {
-        if (!ChatCraftConfig.get().followMobEnabled) return;
+        if (!ChatCraftConfig.get().followFireworkEnabled) return;
         queue.offer(new ChatAction(ChatAction.Type.FOLLOW_EVENT, user));
-        activity.add("event", user, "follow", "Spawn zombie", test ? "test queued" : "queued");
+        activity.add("event", user, "follow", "Firework", test ? "test queued" : "queued");
     }
 
     public void enqueueSub(String user, boolean test) {

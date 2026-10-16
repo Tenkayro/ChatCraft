@@ -1,6 +1,7 @@
 package de.tenkayro.chatcraft.overlay;
 
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
+import de.tenkayro.chatcraft.mixin.AnimatedResultButtonAccessor;
 import de.tenkayro.chatcraft.mixin.RecipeBookResultsAccessor;
 import de.tenkayro.chatcraft.mixin.RecipeBookWidgetAccessor;
 import net.minecraft.client.MinecraftClient;
@@ -27,10 +28,12 @@ public final class RecipeBookOverlayRenderer {
         context.getMatrices().push();
         context.getMatrices().translate(0, 0, 650);
         try {
-            for (int index = 0; index < buttons.size(); index++) {
-                AnimatedResultButton button = buttons.get(index);
-                if (!button.hasResults()) continue;
-                String label = "RECIPE" + (index + 1);
+            int visibleIndex = 0;
+            for (AnimatedResultButton button : buttons) {
+                if (!button.visible || !button.active
+                        || ((AnimatedResultButtonAccessor) button).chatcraft$getResultCollection() == null
+                        || !button.hasResults()) continue;
+                String label = "RECIPE" + (++visibleIndex);
                 int width = client.textRenderer.getWidth(label);
                 int x = button.getX();
                 int y = button.getY();

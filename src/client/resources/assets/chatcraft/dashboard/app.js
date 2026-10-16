@@ -59,7 +59,7 @@ function fillSettings(settings) {
   $("settingAutoConnect").checked = settings.autoConnect;
   $("settingAutoReconnect").checked = settings.autoReconnect;
   $("settingKeepRunning").checked = settings.keepRunningUnfocused;
-  $("settingFollowMob").checked = settings.followMobEnabled;
+  $("settingFollowFirework").checked = settings.followFireworkEnabled;
   $("settingSubTnt").checked = settings.subTntEnabled;
   $("settingPrivilegedCommands").checked = settings.privilegedCommandsEnabled;
 }
@@ -209,7 +209,7 @@ $("settingsForm").addEventListener("submit", async (event) => {
         autoConnect: $("settingAutoConnect").checked,
         autoReconnect: $("settingAutoReconnect").checked,
         keepRunningUnfocused: $("settingKeepRunning").checked,
-        followMobEnabled: $("settingFollowMob").checked,
+        followFireworkEnabled: $("settingFollowFirework").checked,
         subTntEnabled: $("settingSubTnt").checked,
         privilegedCommandsEnabled: $("settingPrivilegedCommands").checked
       })

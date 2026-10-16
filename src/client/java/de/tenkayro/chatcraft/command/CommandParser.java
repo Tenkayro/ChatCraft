@@ -51,6 +51,13 @@ public final class CommandParser {
         return INVISIBLE_DUPLICATE_MARKERS.matcher(message).replaceAll("");
     }
 
+    public boolean isCommandToken(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String command = sanitizeMessage(raw).trim().toUpperCase(Locale.ROOT);
+        if (command.equals("TOWER") || command.equals("PILLAR") || command.equals("BUILDUP")) return true;
+        return parseSingle(command) != null;
+    }
+
     private ChatAction parseSingle(String raw) {
         String command = raw.trim().toUpperCase(Locale.ROOT);
         Matcher timed = TIMED.matcher(command);

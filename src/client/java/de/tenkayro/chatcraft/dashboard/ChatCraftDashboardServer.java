@@ -184,7 +184,6 @@ public final class ChatCraftDashboardServer {
         payload.put("settings", settingsPayload(config));
         payload.put("events", activity.snapshot());
         payload.put("chat", ChatCraftClient.chatFeed().webMessages());
-        payload.put("emotes", ChatCraftClient.chatFeed().webEmotes());
         sendJson(exchange, 200, payload);
     }
 
@@ -222,7 +221,7 @@ public final class ChatCraftDashboardServer {
             config.autoConnect = bool(request, "autoConnect", config.autoConnect);
             config.autoReconnect = bool(request, "autoReconnect", config.autoReconnect);
             config.keepRunningUnfocused = bool(request, "keepRunningUnfocused", config.keepRunningUnfocused);
-            config.followMobEnabled = bool(request, "followMobEnabled", config.followMobEnabled);
+            config.followFireworkEnabled = bool(request, "followFireworkEnabled", config.followFireworkEnabled);
             config.subTntEnabled = bool(request, "subTntEnabled", config.subTntEnabled);
             config.privilegedCommandsEnabled = bool(request, "privilegedCommandsEnabled", config.privilegedCommandsEnabled);
             config.movementDurationTicks = integer(request, "movementDurationTicks", config.movementDurationTicks);
@@ -338,7 +337,7 @@ public final class ChatCraftDashboardServer {
         if (!authorizedPost(exchange)) return;
         String event = string(readJson(exchange), "event");
         ChatCraftConfig config = ChatCraftConfig.get();
-        if ((event.equals("follow") && !config.followMobEnabled)
+        if ((event.equals("follow") && !config.followFireworkEnabled)
                 || (event.equals("sub") && !config.subTntEnabled)) {
             sendJson(exchange, 409, Map.of("error", "Enable this event in Settings first"));
             return;
@@ -435,7 +434,7 @@ public final class ChatCraftDashboardServer {
         settings.put("autoConnect", config.autoConnect);
         settings.put("autoReconnect", config.autoReconnect);
         settings.put("keepRunningUnfocused", config.keepRunningUnfocused);
-        settings.put("followMobEnabled", config.followMobEnabled);
+        settings.put("followFireworkEnabled", config.followFireworkEnabled);
         settings.put("subTntEnabled", config.subTntEnabled);
         settings.put("privilegedCommandsEnabled", config.privilegedCommandsEnabled);
         settings.put("movementDurationTicks", config.movementDurationTicks);

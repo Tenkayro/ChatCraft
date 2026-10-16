@@ -2,6 +2,7 @@ package de.tenkayro.chatcraft.gui;
 
 import de.tenkayro.chatcraft.mixin.RecipeBookResultsAccessor;
 import de.tenkayro.chatcraft.mixin.RecipeBookWidgetAccessor;
+import de.tenkayro.chatcraft.mixin.AnimatedResultButtonAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.gui.screen.recipebook.AnimatedResultButton;
@@ -30,11 +31,13 @@ public final class RecipeBookController {
         RecipeBookWidget book = openBook(client);
         if (book == null) return "skipped: recipe book is not ready";
         book.refresh();
-        List<AnimatedResultButton> buttons = results(book).chatcraft$getResultButtons();
+        List<AnimatedResultButton> buttons = results(book).chatcraft$getResultButtons().stream()
+                .filter(RecipeBookController::isUsable)
+                .toList();
         int index = oneBasedIndex - 1;
         if (index < 0 || index >= buttons.size()) return "skipped: invalid recipe number";
         AnimatedResultButton button = buttons.get(index);
-        if (!button.hasResults() || !click(book, button)) return "skipped: recipe is not visible";
+        if (!click(book, button)) return "skipped: recipe is not visible";
         return "selected recipe " + oneBasedIndex;
     }
 
@@ -74,5 +77,11 @@ public final class RecipeBookController {
     private static boolean click(RecipeBookWidget book, ClickableWidget button) {
         return book.mouseClicked(button.getX() + button.getWidth() / 2.0,
                 button.getY() + button.getHeight() / 2.0, 0);
+    }
+
+    private static boolean isUsable(AnimatedResultButton button) {
+        return button.visible && button.active
+                && ((AnimatedResultButtonAccessor) button).chatcraft$getResultCollection() != null
+                && button.hasResults();
     }
 }
