@@ -3,26 +3,106 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="All ChatCraft Twitch viewer commands.">
-  <title>Viewer Commands · ChatCraft</title>
+  <meta name="description" content="Complete ChatCraft command reference for Twitch viewers.">
+  <title>Viewer Commands - ChatCraft</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <header class="top"><a class="logo" href="index.html">ChatCraft</a><nav><a class="active" href="viewer.html">Viewer</a><a href="streamer.html">Streamer</a></nav></header>
-  <main class="guide">
-    <section class="intro"><span>VIEWER GUIDE</span><h1>Control Minecraft</h1><p>Commands are case-insensitive. Add the streamer's prefix if one is configured, for example <code>!W</code>.</p></section>
-    <section><h2>Movement</h2><div class="command-grid">
-      <div><code>W</code><span>Forward</span></div><div><code>S</code><span>Backward</span></div><div><code>A</code><span>Strafe left</span></div><div><code>D</code><span>Strafe right</span></div>
-      <div><code>JUMP</code><span>Jump</span></div><div><code>SNEAK</code><span>Sneak</span></div><div><code>SPRINT</code><span>Sprint</span></div>
-    </div></section>
-    <section><h2>Camera</h2><div class="command-grid">
-      <div><code>LEFT</code><span>Look left</span></div><div><code>RIGHT</code><span>Look right</span></div><div><code>UP</code><span>Look up</span></div><div><code>DOWN</code><span>Look down</span></div>
-    </div></section>
-    <section><h2>World and items</h2><div class="command-grid">
-      <div><code>ATTACK</code></div><div><code>USE</code><span>Use / interact</span></div><div><code>BREAK</code><span>Mine targeted block</span></div><div><code>PLACE</code><span>Place held block</span></div>
-      <div><code>1–9</code><span>Hotbar slot</span></div><div><code>Q</code><span>Drop item</span></div><div><code>E</code><span>Open / close inventory</span></div><div><code>ESC</code><span>Close screen</span></div><div><code>RESPAWN</code></div>
-    </div><p class="aliases">Aliases: <code>FORWARD</code>, <code>BACK</code>, <code>HIT</code>, <code>INTERACT</code>, <code>MINE</code>, <code>BUILD</code>, <code>DROP</code>, <code>CLOSE</code>.</p></section>
-    <section><h2>Inventory slots</h2><div class="slot-examples"><div><code>A1</code><span>Left-click</span></div><div><code>RA1</code><span>Right-click</span></div><div><code>SA1</code><span>Shift-click</span></div></div><p>Use the green labels currently shown over the open inventory or container.</p></section>
+<body class="viewer-page">
+  <header class="top">
+    <a class="logo" href="index.html">ChatCraft</a>
+    <nav aria-label="Guide sections"><a class="active" href="viewer.html">Viewer</a><a href="streamer.html">Streamer</a></nav>
+  </header>
+
+  <main class="viewer-guide">
+    <header class="viewer-hero">
+      <p class="section-label">VIEWER COMMANDS</p>
+      <h1>Play Minecraft through Twitch chat</h1>
+      <p>Send one command per chat message. Commands are not case-sensitive.</p>
+      <div class="viewer-rules" aria-label="Command rules">
+        <div><b>Prefix</b><span>Use the streamer's prefix if enabled, for example <code>!W</code>.</span></div>
+        <div><b>Cooldown</b><span>Wait if ChatCraft rejects commands sent too quickly.</span></div>
+        <div><b>Target</b><span>World actions affect whatever the player is currently looking at.</span></div>
+      </div>
+    </header>
+
+    <nav class="section-nav" aria-label="Command categories">
+      <a href="#movement">Movement</a><a href="#camera">Camera</a><a href="#gameplay">Gameplay</a><a href="#inventory">Inventory</a>
+    </nav>
+
+    <section id="movement" class="command-section">
+      <div class="section-heading"><div><p class="section-label">MOVEMENT</p><h2>Move the player</h2></div><p>Movement lasts for the duration configured by the streamer.</p></div>
+      <div class="table-wrap"><table class="command-table">
+        <thead><tr><th>Type in chat</th><th>Also works</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td><code>W</code></td><td><code>FORWARD</code></td><td>Walk forward</td></tr>
+          <tr><td><code>S</code></td><td><code>BACK</code> <code>BACKWARD</code></td><td>Walk backward</td></tr>
+          <tr><td><code>A</code></td><td><code>STRAFELEFT</code></td><td>Strafe left</td></tr>
+          <tr><td><code>D</code></td><td><code>STRAFERIGHT</code></td><td>Strafe right</td></tr>
+          <tr><td><code>JUMP</code></td><td><code>SPACE</code></td><td>Jump</td></tr>
+          <tr><td><code>SNEAK</code></td><td><code>CROUCH</code></td><td>Sneak</td></tr>
+          <tr><td><code>SPRINT</code></td><td>-</td><td>Sprint</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="camera" class="command-section">
+      <div class="section-heading"><div><p class="section-label">CAMERA</p><h2>Change the view</h2></div><p>Each command turns by the streamer's configured camera step.</p></div>
+      <div class="table-wrap"><table class="command-table compact-table">
+        <thead><tr><th>Type in chat</th><th>Also works</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td><code>LEFT</code></td><td><code>CAMLEFT</code></td><td>Look left</td></tr>
+          <tr><td><code>RIGHT</code></td><td><code>CAMRIGHT</code></td><td>Look right</td></tr>
+          <tr><td><code>UP</code></td><td><code>CAMUP</code></td><td>Look up</td></tr>
+          <tr><td><code>DOWN</code></td><td><code>CAMDOWN</code></td><td>Look down</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="gameplay" class="command-section">
+      <div class="section-heading"><div><p class="section-label">GAMEPLAY</p><h2>Interact with the world</h2></div></div>
+      <div class="table-wrap"><table class="command-table">
+        <thead><tr><th>Type in chat</th><th>Also works</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td><code>ATTACK</code></td><td><code>HIT</code></td><td>Attack once, for example to hit a mob</td></tr>
+          <tr><td><code>BREAK</code></td><td><code>MINE</code></td><td>Mine the targeted block until it is broken or the action times out</td></tr>
+          <tr><td><code>USE</code></td><td><code>INTERACT</code></td><td>Use the held item or interact with the target</td></tr>
+          <tr><td><code>PLACE</code></td><td><code>BUILD</code></td><td>Place a held block at the targeted position</td></tr>
+          <tr><td><code>Q</code></td><td><code>DROP</code></td><td>Drop one selected item</td></tr>
+          <tr><td><code>1</code> to <code>9</code></td><td>-</td><td>Select that hotbar slot</td></tr>
+          <tr><td><code>RESPAWN</code></td><td>-</td><td>Respawn from the death screen</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="inventory" class="command-section">
+      <div class="section-heading"><div><p class="section-label">INVENTORY</p><h2>Open screens and click slots</h2></div><p>Green labels appear over usable slots while an inventory or container is open.</p></div>
+      <div class="table-wrap"><table class="command-table compact-table">
+        <thead><tr><th>Type in chat</th><th>Also works</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td><code>E</code></td><td><code>INVENTORY</code> <code>INV</code></td><td>Open or close the player inventory</td></tr>
+          <tr><td><code>ESC</code></td><td><code>CLOSE</code></td><td>Close the current inventory or container</td></tr>
+          <tr><td><code>A1</code></td><td>Any visible label</td><td>Left-click that exact slot</td></tr>
+          <tr><td><code>RA1</code></td><td><code>R</code> + label</td><td>Right-click that exact slot</td></tr>
+          <tr><td><code>SA1</code></td><td><code>S</code> + label</td><td>Shift-click that exact slot</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="slot-guide">
+        <div>
+          <h3>How labels are arranged</h3>
+          <p>Letters are columns. Numbers are rows. Always copy the green label currently visible in Minecraft.</p>
+          <div class="slot-grid" aria-label="Example slot grid"><span>A1</span><span>B1</span><span>C1</span><span>A2</span><span>B2</span><span>C2</span><span>A3</span><span>B3</span><span>C3</span></div>
+        </div>
+        <div class="slot-example">
+          <h3>Example</h3>
+          <p><code>B2</code> left-clicks the center slot.</p>
+          <p><code>RB2</code> right-clicks it.</p>
+          <p><code>SB2</code> shift-clicks it.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="viewer-footer"><a href="index.html">Back to guide selection</a><a href="streamer.html">Streamer setup</a></footer>
   </main>
 </body>
 </html>
