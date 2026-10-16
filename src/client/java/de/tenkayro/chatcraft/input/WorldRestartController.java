@@ -53,7 +53,7 @@ public final class WorldRestartController {
         worldName = server.getSaveProperties().getLevelName();
         state = State.WAITING_FOR_STOP;
         deadline = System.currentTimeMillis() + 30_000L;
-        activity.add("admin", "", ".cmd restart", worldName, "saving and closing current world");
+        activity.add("admin", "", "?restart", worldName, "saving and closing current world");
         client.disconnect(new TitleScreen());
         return "restarting local world";
     }
@@ -90,7 +90,7 @@ public final class WorldRestartController {
         try (LevelStorage.Session session = storage.createSession(directoryName)) {
             session.deleteSessionLock();
         }
-        activity.add("admin", "", ".cmd restart", directoryName, "old world deleted; creating replacement");
+        activity.add("admin", "", "?restart", directoryName, "old world deleted; creating replacement");
         CreateWorldScreen.create(client, new TitleScreen());
         state = State.WAITING_FOR_CREATE_SCREEN;
         deadline = System.currentTimeMillis() + 60_000L;
@@ -114,7 +114,7 @@ public final class WorldRestartController {
 
     private void finishWhenJoined(MinecraftClient client) {
         if (client.world == null || client.player == null || !client.isIntegratedServerRunning()) return;
-        activity.add("admin", "", ".cmd restart", worldName,
+        activity.add("admin", "", "?restart", worldName,
                 "new Survival/Easy world ready; cheats, keepInventory and immediate respawn enabled");
         clear();
     }
@@ -122,7 +122,7 @@ public final class WorldRestartController {
     private void fail(String message, Throwable exception) {
         if (exception == null) ChatCraftClient.LOGGER.error(message);
         else ChatCraftClient.LOGGER.error(message, exception);
-        activity.add("admin", "", ".cmd restart", worldName, message);
+        activity.add("admin", "", "?restart", worldName, message);
         clear();
     }
 

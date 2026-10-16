@@ -61,12 +61,11 @@ public final class CommandService {
     public static boolean isMinecraftCommand(String message) {
         if (message == null) return false;
         String value = CommandParser.sanitizeMessage(message).stripLeading();
-        return value.regionMatches(true, 0, ".cmd", 0, 4)
-                && value.length() > 4 && Character.isWhitespace(value.charAt(4));
+        return value.startsWith("?") && value.length() > 1;
     }
 
     private static String extractMinecraftCommand(String message) {
-        String value = CommandParser.sanitizeMessage(message).stripLeading().substring(4).trim();
+        String value = CommandParser.sanitizeMessage(message).stripLeading().substring(1).trim();
         if (value.startsWith("/")) value = value.substring(1).stripLeading();
         return value;
     }
