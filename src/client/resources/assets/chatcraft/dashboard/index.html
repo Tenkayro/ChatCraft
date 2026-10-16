@@ -4,137 +4,91 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="chatcraft-session" content="__CHATCRAFT_SESSION__">
-  <title>ChatCraft Dashboard</title>
+  <title>ChatCraft</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <main>
     <header>
-      <div>
-        <p class="eyebrow">LOCAL CONTROL PANEL</p>
-        <h1>ChatCraft</h1>
-        <p class="subtitle">Twitch chat activity and Minecraft actions in one place.</p>
-      </div>
-      <div id="connectionBadge" class="badge neutral">Loading…</div>
+      <div><h1>ChatCraft</h1><p class="subtitle">Local Twitch control panel</p></div>
+      <div id="connectionBadge" class="badge neutral">Loading...</div>
     </header>
-
-    <section class="stats" aria-label="Current status">
-      <article><span>Connection</span><strong id="connectionText">Loading…</strong></article>
+    <section class="stats" aria-label="Status">
+      <article><span>Connection</span><strong id="connectionText">Loading...</strong></article>
       <article><span>Queue</span><strong id="queueText">0</strong></article>
       <article><span>Twitch user</span><strong id="usernameText">Not configured</strong></article>
-      <article><span>Controls</span><strong id="controlsText">—</strong></article>
+      <article><span>Controls</span><strong id="controlsText">-</strong></article>
     </section>
-
     <section class="grid">
       <article class="panel setup-panel">
-        <div class="panel-heading">
-          <div><p class="eyebrow">SETUP</p><h2>Twitch OAuth</h2></div>
-        </div>
-        <p class="muted">Register this exact redirect URL in the Twitch Developer Console:</p>
-        <div class="copy-row"><code id="redirectUrl">Loading…</code><button id="copyRedirect" class="secondary">Copy</button></div>
+        <div class="panel-heading"><h2>Twitch setup</h2></div>
+        <p class="step"><strong>1.</strong> <a href="https://dev.twitch.tv/console/apps/create" target="_blank" rel="noreferrer">Create a Twitch application</a> as <b>Public</b> / <b>Chat Bot</b>.</p>
+        <p class="step"><strong>2.</strong> Add this exact OAuth redirect URL:</p>
+        <div class="copy-row"><code id="redirectUrl">Loading...</code><button id="copyRedirect" class="secondary">Copy</button></div>
         <form id="oauthForm">
-          <label for="clientId">Twitch Client ID</label>
-          <div class="input-row">
-            <input id="clientId" autocomplete="off" spellcheck="false" placeholder="Enter your Client ID" required>
-            <button type="submit">Authorize with Twitch</button>
-          </div>
+          <label for="clientId">3. Paste the Client ID</label>
+          <div class="input-row"><input id="clientId" autocomplete="off" spellcheck="false" placeholder="Client ID" required><button type="submit">Authorize</button></div>
         </form>
         <p id="oauthMessage" class="message" role="status"></p>
-        <div class="token-status-row">
-          <span>Saved token</span>
-          <strong id="tokenStatus">Checking…</strong>
-          <button id="clearToken" class="secondary danger">Clear token</button>
-        </div>
+        <div class="token-status-row"><span>Token</span><strong id="tokenStatus">Checking...</strong><button id="clearToken" class="secondary danger">Clear</button></div>
         <div id="tokenResult" class="token-result" hidden>
-          <label>Access token</label>
-          <code id="tokenValue"></code>
-          <div class="button-row">
-            <button id="copyToken" class="secondary">Copy token</button>
-            <button id="saveToken">Save to ChatCraft</button>
-          </div>
-          <p class="warning">Keep this token private. It grants access to read chat as your Twitch account.</p>
+          <label>Access token</label><code id="tokenValue"></code>
+          <div class="button-row"><button id="copyToken" class="secondary">Copy</button><button id="saveToken">Save securely</button></div>
+          <p class="warning">Keep this token private.</p>
         </div>
       </article>
-
       <article class="panel control-panel">
-        <div class="panel-heading">
-          <div><p class="eyebrow">CONTROL</p><h2>Connection</h2></div>
-        </div>
-        <p id="connectionDetail" class="detail">Loading status…</p>
-        <div class="button-row">
-          <button id="connectButton">Connect</button>
-          <button id="disconnectButton" class="secondary">Disconnect</button>
-        </div>
-        <p class="muted small">The dashboard is available only on this computer. Minecraft actions still run on the client thread.</p>
+        <div class="panel-heading"><h2>Connection</h2></div>
+        <p id="connectionDetail" class="detail">Loading status...</p>
+        <div class="button-row"><button id="connectButton">Connect</button><button id="disconnectButton" class="secondary">Disconnect</button></div>
       </article>
     </section>
-
     <section class="panel settings-panel">
-      <div class="panel-heading">
-        <div><p class="eyebrow">CONFIGURATION</p><h2>ChatCraft settings</h2></div>
-      </div>
+      <div class="panel-heading"><h2>Settings</h2></div>
       <form id="settingsForm">
         <div class="form-grid">
-          <label>Twitch username
-            <input id="settingUsername" autocomplete="off" placeholder="yourchannel">
-          </label>
-          <label>Command prefix
-            <input id="settingPrefix" autocomplete="off" maxlength="16" placeholder="Optional, for example !">
-          </label>
-          <label>Movement duration (ticks)
-            <input id="settingMovement" type="number" min="1" max="200">
-          </label>
-          <label>Camera step (degrees)
-            <input id="settingCamera" type="number" min="1" max="180" step="0.5">
-          </label>
-          <label>Queue size
-            <input id="settingQueue" type="number" min="8" max="4096">
-          </label>
-          <label>Cooldown (milliseconds)
-            <input id="settingCooldown" type="number" min="0" max="60000">
-          </label>
-          <label>Whitelist
-            <textarea id="settingWhitelist" rows="4" placeholder="One Twitch username per line"></textarea>
-          </label>
-          <label>Blacklist
-            <textarea id="settingBlacklist" rows="4" placeholder="One Twitch username per line"></textarea>
-          </label>
+          <label>Twitch username<input id="settingUsername" autocomplete="off" placeholder="yourchannel"></label>
+          <label>Command prefix<input id="settingPrefix" autocomplete="off" maxlength="16" placeholder="Optional, e.g. !"></label>
+          <label>Movement duration (ticks)<input id="settingMovement" type="number" min="1" max="200"></label>
+          <label>Camera step (degrees)<input id="settingCamera" type="number" min="1" max="180" step="0.5"></label>
+          <label>Queue size<input id="settingQueue" type="number" min="8" max="4096"></label>
+          <label>Cooldown (ms)<input id="settingCooldown" type="number" min="0" max="60000"></label>
+          <label>Whitelist<textarea id="settingWhitelist" rows="3" placeholder="One username per line"></textarea></label>
+          <label>Blacklist<textarea id="settingBlacklist" rows="3" placeholder="One username per line"></textarea></label>
         </div>
         <div class="toggles">
-          <label><input id="settingControls" type="checkbox"> Enable Twitch controls</label>
-          <label><input id="settingOverlay" type="checkbox"> Show slot overlay</label>
+          <label><input id="settingControls" type="checkbox"> Controls</label>
+          <label><input id="settingOverlay" type="checkbox"> Slot overlay</label>
           <label><input id="settingAutoConnect" type="checkbox"> Auto-connect</label>
           <label><input id="settingAutoReconnect" type="checkbox"> Auto-reconnect</label>
-          <label><input id="settingKeepRunning" type="checkbox"> Keep running when unfocused</label>
+          <label><input id="settingKeepRunning" type="checkbox"> Background mode</label>
         </div>
-        <p class="muted small">Release the mouse without opening a screen using the ChatCraft key binding (default: F8). Change it under Minecraft Options → Controls → Key Binds.</p>
-        <div class="settings-actions">
-          <button type="submit">Save settings</button>
-          <span id="settingsMessage" class="message" role="status"></span>
-        </div>
+        <p class="muted small">Background mode key: F8 by default. Change it in Minecraft Controls.</p>
+        <div class="settings-actions"><button type="submit">Save</button><span id="settingsMessage" class="message" role="status"></span></div>
       </form>
     </section>
-
+    <section class="panel world-panel">
+      <div class="panel-heading"><div><h2>World rules</h2><p class="muted small">Requires cheats or server operator permission.</p></div></div>
+      <div class="rule-grid">
+        <label>Keep inventory<select id="keepInventory"><option value="true">On</option><option value="false">Off</option></select></label>
+        <button class="secondary rule-button" data-rule="keepInventory" data-input="keepInventory">Apply</button>
+        <label>Immediate respawn<select id="immediateRespawn"><option value="true">On</option><option value="false">Off</option></select></label>
+        <button class="secondary rule-button" data-rule="doImmediateRespawn" data-input="immediateRespawn">Apply</button>
+      </div>
+      <p id="ruleMessage" class="message" role="status"></p>
+    </section>
+    <section class="panel obs-panel">
+      <div class="panel-heading"><div><h2>OBS chat overlay</h2><p class="muted small">Add this URL as a browser source. It uses a transparent background.</p></div></div>
+      <div class="copy-row"><code id="obsUrl">Loading...</code><button id="copyObs" class="secondary">Copy</button><a class="button-link" href="/obs" target="_blank" rel="noreferrer">Preview</a></div>
+    </section>
     <section class="panel activity-panel">
       <div class="panel-heading activity-heading">
-        <div><p class="eyebrow">LIVE</p><h2>Activity</h2></div>
-        <div class="filters" aria-label="Activity filter">
-          <button class="filter active" data-filter="all">All</button>
-          <button class="filter" data-filter="chat">Chat</button>
-          <button class="filter" data-filter="command">Commands</button>
-          <button class="filter" data-filter="action">Actions</button>
-          <button class="filter" data-filter="system">System</button>
-        </div>
+        <h2>Activity</h2>
+        <div class="filters" aria-label="Activity filter"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="chat">Chat</button><button class="filter" data-filter="command">Commands</button><button class="filter" data-filter="action">Actions</button><button class="filter" data-filter="system">System</button></div>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Time</th><th>Type</th><th>User / message</th><th>Action / result</th></tr></thead>
-          <tbody id="activityBody"><tr><td colspan="4" class="empty">Waiting for activity…</td></tr></tbody>
-        </table>
-      </div>
+      <div class="table-wrap"><table><thead><tr><th>Time</th><th>Type</th><th>User / message</th><th>Action / result</th></tr></thead><tbody id="activityBody"><tr><td colspan="4" class="empty">Waiting for activity...</td></tr></tbody></table></div>
     </section>
   </main>
   <script src="/app.js"></script>
 </body>
 </html>
-

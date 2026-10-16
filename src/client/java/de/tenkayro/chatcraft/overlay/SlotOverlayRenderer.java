@@ -9,6 +9,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.Slot;
 
 public final class SlotOverlayRenderer {
+    private static final float LABEL_SCALE = 0.75F;
     private static final long MOVE_DURATION_NANOS = 180_000_000L;
     private static final long CLICK_DURATION_NANOS = 350_000_000L;
     private static final long VISIBLE_DURATION_NANOS = 2_500_000_000L;
@@ -27,8 +28,13 @@ public final class SlotOverlayRenderer {
                 int x = originX + item.slot().x;
                 int y = originY + item.slot().y;
                 int width = client.textRenderer.getWidth(item.label());
-                context.fill(x, y, x + width + 2, y + 9, 0xE0000000);
-                context.drawTextWithShadow(client.textRenderer, item.label(), x + 1, y, 0x55FF55);
+                int scaledWidth = Math.round((width + 2) * LABEL_SCALE);
+                context.fill(x, y, x + scaledWidth + 1, y + 7, 0xE0000000);
+                context.getMatrices().push();
+                context.getMatrices().translate(x + 1, y, 1);
+                context.getMatrices().scale(LABEL_SCALE, LABEL_SCALE, 1.0F);
+                context.drawTextWithShadow(client.textRenderer, item.label(), 0, 0, 0x55FF55);
+                context.getMatrices().pop();
             }
             renderVirtualCursor(screen, context, client, originX, originY);
         } finally {
@@ -73,22 +79,25 @@ public final class SlotOverlayRenderer {
 
         ItemStack cursorStack = screen.getScreenHandler().getCursorStack();
         if (!cursorStack.isEmpty()) {
-            context.fill(cursorX + 6, cursorY + 6, cursorX + 24, cursorY + 24, 0xB0000000);
-            context.drawItemInSlot(client.textRenderer, cursorStack, cursorX + 7, cursorY + 7);
+            int itemX = cursorX + 10;
+            int itemY = cursorY + 7;
+            context.fill(itemX - 1, itemY - 1, itemX + 17, itemY + 17, 0xE0000000);
+            drawBorder(context, itemX - 1, itemY - 1, 18, 18, 0xFF55FF55);
+            context.drawItemInSlot(client.textRenderer, cursorStack, itemX, itemY);
         }
         drawPointer(context, cursorX, cursorY);
     }
 
     private static void drawPointer(DrawContext context, int x, int y) {
-        for (int row = 0; row < 11; row++) {
-            int width = row / 2 + 2;
-            context.fill(x, y + row, x + width, y + row + 1, 0xFF111111);
-            if (row > 1 && width > 2) {
-                context.fill(x + 1, y + row, x + width - 1, y + row + 1, 0xFFFFFFFF);
+        int[] widths = {1, 2, 3, 4, 5, 6, 7, 8, 6, 4, 4, 3};
+        for (int row = 0; row < widths.length; row++) {
+            context.fill(x, y + row, x + widths[row] + 2, y + row + 1, 0xFF101010);
+            if (row > 0 && row < 9 && widths[row] > 2) {
+                context.fill(x + 1, y + row, x + widths[row], y + row + 1, 0xFFFFFFFF);
             }
         }
-        context.fill(x + 3, y + 8, x + 6, y + 14, 0xFF111111);
-        context.fill(x + 4, y + 8, x + 5, y + 13, 0xFFFFFFFF);
+        context.fill(x + 4, y + 8, x + 7, y + 14, 0xFF101010);
+        context.fill(x + 5, y + 8, x + 6, y + 13, 0xFFFFFFFF);
     }
 
     private static void drawBorder(DrawContext context, int x, int y, int width, int height, int color) {

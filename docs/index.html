@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="ChatCraft setup, commands and usage guide.">
+  <title>ChatCraft Guide</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><div><span>Fabric 1.21.1</span><h1>ChatCraft</h1><p>Let Twitch chat play Minecraft.</p></div><a href="https://github.com/Tenkayro/ChatCraft">GitHub</a></header>
+  <nav><a href="#install">Install</a><a href="#twitch">Twitch</a><a href="#commands">Commands</a><a href="#slots">Inventory</a><a href="#dashboard">Dashboard</a><a href="#help">Help</a></nav>
+  <main>
+    <section id="install"><h2>Install</h2><ol><li>Install Fabric Loader for Minecraft 1.21.1.</li><li>Put Fabric API, Mod Menu and the ChatCraft JAR into <code>.minecraft/mods</code>.</li><li>Start Minecraft and open ChatCraft from Mod Menu.</li><li>Click <b>Open Web Panel</b>.</li></ol></section>
+    <section id="twitch"><h2>Connect Twitch</h2><ol><li>Open the <a href="https://dev.twitch.tv/console/apps/create">Twitch Developer Console</a>.</li><li>Create a <b>Public</b> application in the <b>Chat Bot</b> category.</li><li>Copy the exact redirect URL shown by ChatCraft into the Twitch application.</li><li>Paste the Client ID into ChatCraft and click <b>Authorize</b>.</li><li>Save the validated token, then click <b>Connect</b>.</li></ol><p>The token is encrypted locally and is never written to logs. Keep the generated key file together with your Minecraft installation and never share either file.</p></section>
+    <section id="commands"><h2>Viewer commands</h2><div class="tables"><table><thead><tr><th>Command</th><th>Action</th></tr></thead><tbody>
+      <tr><td><code>W</code> / <code>FORWARD</code></td><td>Move forward</td></tr><tr><td><code>S</code> / <code>BACK</code></td><td>Move backward</td></tr><tr><td><code>A</code></td><td>Strafe left</td></tr><tr><td><code>D</code></td><td>Strafe right</td></tr><tr><td><code>JUMP</code></td><td>Jump</td></tr><tr><td><code>SNEAK</code></td><td>Sneak</td></tr><tr><td><code>SPRINT</code></td><td>Sprint</td></tr><tr><td><code>LEFT</code> / <code>RIGHT</code></td><td>Turn camera smoothly</td></tr><tr><td><code>UP</code> / <code>DOWN</code></td><td>Look up or down smoothly</td></tr>
+    </tbody></table><table><thead><tr><th>Command</th><th>Action</th></tr></thead><tbody>
+      <tr><td><code>ATTACK</code></td><td>Attack once</td></tr><tr><td><code>BREAK</code> / <code>MINE</code></td><td>Mine the targeted block until confirmed</td></tr><tr><td><code>USE</code></td><td>Use or interact</td></tr><tr><td><code>PLACE</code> / <code>BUILD</code></td><td>Place and verify a held block</td></tr><tr><td><code>1</code> ... <code>9</code></td><td>Select hotbar slot</td></tr><tr><td><code>Q</code> / <code>DROP</code></td><td>Drop selected item</td></tr><tr><td><code>E</code></td><td>Open or close inventory</td></tr><tr><td><code>ESC</code> / <code>CLOSE</code></td><td>Close the current screen</td></tr><tr><td><code>RESPAWN</code></td><td>Respawn on the death screen</td></tr>
+    </tbody></table></div><p>Commands are case-insensitive. If a prefix is configured, viewers must include it, for example <code>!W</code>.</p></section>
+    <section id="slots"><h2>Inventory and containers</h2><p>ChatCraft labels the real slots of any handled vanilla screen. The label is rendered above the item and a virtual cursor shows chat interactions.</p><table><thead><tr><th>Example</th><th>Action</th></tr></thead><tbody><tr><td><code>A1</code></td><td>Left-click slot A1</td></tr><tr><td><code>RA1</code></td><td>Right-click slot A1</td></tr><tr><td><code>SA1</code></td><td>Shift-click slot A1</td></tr></tbody></table><p>It uses Minecraft's ScreenHandler and Slot APIs, never desktop mouse coordinates.</p></section>
+    <section id="dashboard"><h2>Dashboard and OBS</h2><p>The local HTTPS panel manages Twitch, controls, cooldowns, access lists and the activity log. World-rule buttons request <code>keepInventory</code> and <code>doImmediateRespawn</code> for the open world; cheats or operator rights are required.</p><p>Copy the OBS URL from the dashboard into an OBS Browser Source. The transparent overlay shows Twitch colors, badges and 7TV emotes.</p></section>
+    <section id="help"><h2>Troubleshooting</h2><dl><dt>Twitch will not connect</dt><dd>Validate the token again, verify <code>chat:read</code>, and check that the configured username matches the token account.</dd><dt>OAuth page says localhost is unavailable</dt><dd>That is expected only if Minecraft is not running. Open the dashboard first and use its exact redirect URL.</dd><dt>Commands appear but do nothing</dt><dd>Enable Controls, check prefix/cooldown and whitelist/blacklist, then use <code>/chatcraft test W</code>.</dd><dt>World rules fail</dt><dd>Enable cheats in singleplayer or grant the connected account operator permission on the server.</dd></dl></section>
+  </main>
+  <footer>ChatCraft is an independent project and is not affiliated with Mojang or Twitch.</footer>
+</body>
+</html>

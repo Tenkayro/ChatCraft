@@ -14,10 +14,10 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); min-height: 100vh; }
-main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 64px; }
-header { display: flex; justify-content: space-between; gap: 24px; align-items: center; margin-bottom: 26px; }
+main { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: 26px 0 48px; }
+header { display: flex; justify-content: space-between; gap: 24px; align-items: center; margin-bottom: 18px; }
 h1, h2, p { margin-top: 0; }
-h1 { margin-bottom: 5px; font-size: clamp(2.2rem, 5vw, 3.6rem); letter-spacing: -0.055em; }
+h1 { margin-bottom: 3px; font-size: 2rem; letter-spacing: -.035em; }
 h2 { margin-bottom: 0; font-size: 1.25rem; }
 .eyebrow { margin-bottom: 6px; color: var(--purple); font-size: .72rem; font-weight: 800; letter-spacing: .14em; }
 .subtitle, .muted { color: var(--muted); }
@@ -33,11 +33,13 @@ h2 { margin-bottom: 0; font-size: 1.25rem; }
 .stats span { display: block; color: var(--muted); font-size: .76rem; margin-bottom: 7px; }
 .stats strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 12px; margin-bottom: 12px; }
-.panel { padding: 22px; }
-.panel-heading { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+.panel { padding: 18px; }
+.panel-heading { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+a { color: var(--purple); }
+.step { margin-bottom: 10px; color: var(--muted); }
 label { display: block; font-size: .82rem; color: var(--muted); margin: 16px 0 7px; }
-input, textarea, button { font: inherit; }
-input, textarea { min-width: 0; width: 100%; color: var(--text); background: #0e0e14; border: 1px solid var(--line); border-radius: 7px; padding: 10px 11px; outline: none; }
+input, textarea, button, select { font: inherit; }
+input, textarea, select { min-width: 0; width: 100%; color: var(--text); background: #0e0e14; border: 1px solid var(--line); border-radius: 7px; padding: 10px 11px; outline: none; }
 textarea { resize: vertical; }
 input:focus, textarea:focus { border-color: var(--purple); }
 button { cursor: pointer; border: 1px solid var(--purple-strong); border-radius: 9px; padding: 10px 14px; background: var(--purple-strong); color: white; font-weight: 750; }
@@ -59,7 +61,7 @@ button.danger { color: var(--red); }
 .message.success { color: var(--green); }
 .detail { min-height: 48px; padding: 13px; background: #0e0e14; border: 1px solid var(--line); border-radius: 9px; }
 .control-panel .button-row { margin-bottom: 20px; }
-.settings-panel { margin-bottom: 12px; }
+.settings-panel, .world-panel, .obs-panel { margin-bottom: 12px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .form-grid label { margin: 0; }
 .form-grid label input, .form-grid label textarea { margin-top: 7px; }
@@ -68,6 +70,11 @@ button.danger { color: var(--red); }
 .toggles input { width: auto; margin: 0; accent-color: var(--purple-strong); }
 .settings-actions { display: flex; gap: 12px; align-items: center; margin-top: 18px; }
 .settings-actions .message { margin: 0; }
+.rule-grid { display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 10px; align-items: end; }
+.rule-grid label { margin: 0; }
+.rule-grid select { margin-top: 7px; }
+.rule-button { height: 41px; }
+.button-link { display: inline-flex; align-items: center; text-decoration: none; border: 1px solid var(--line); border-radius: 9px; padding: 10px 14px; color: var(--text); font-weight: 750; }
 .activity-panel { padding: 0; overflow: hidden; }
 .activity-heading { padding: 22px 22px 4px; align-items: center; }
 .filters { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
@@ -89,7 +96,7 @@ td:first-child { color: var(--muted); white-space: nowrap; }
   header { align-items: flex-start; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .grid { grid-template-columns: 1fr; }
-  .form-grid, .toggles { grid-template-columns: 1fr; }
+  .form-grid, .toggles, .rule-grid { grid-template-columns: 1fr; }
   .activity-heading { align-items: flex-start; flex-direction: column; gap: 14px; }
   .filters { justify-content: flex-start; }
   .input-row { align-items: stretch; flex-direction: column; }

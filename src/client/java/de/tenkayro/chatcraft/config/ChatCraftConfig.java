@@ -24,7 +24,8 @@ public final class ChatCraftConfig {
 
     public String username = "";
     public String twitchClientId = "";
-    public String oauthToken = "";
+    public transient String oauthToken = "";
+    private String encryptedOauthToken = "";
     public int dashboardPort = 38473;
     public String commandPrefix = "";
     public boolean controlsEnabled = true;
@@ -56,12 +57,20 @@ public final class ChatCraftConfig {
                 JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
                 ChatCraftConfig config = GSON.fromJson(json, ChatCraftConfig.class);
                 if (config != null) {
+                    boolean migrated = false;
                     if ((config.username == null || config.username.isBlank())
                         && json.has("channel") && json.get("channel").isJsonPrimitive()) {
                         config.username = json.get("channel").getAsString();
+                        migrated = true;
+                    }
+                    if (json.has("oauthToken") && json.get("oauthToken").isJsonPrimitive()) {
+                        config.oauthToken = json.get("oauthToken").getAsString();
+                        migrated = true;
+                    } else if (config.encryptedOauthToken != null && !config.encryptedOauthToken.isBlank()) {
+                        config.oauthToken = TokenVault.decrypt(config.encryptedOauthToken);
                     }
                     config.normalize();
-                    if (json.has("channel")) config.save();
+                    if (migrated) config.save();
                     return config;
                 }
             } catch (Exception exception) {
@@ -76,13 +85,14 @@ public final class ChatCraftConfig {
     public synchronized void save() {
         normalize();
         try {
+            encryptedOauthToken = TokenVault.encrypt(oauthToken);
             Files.createDirectories(PATH.getParent());
             Path temporary = PATH.resolveSibling(PATH.getFileName() + ".tmp");
             try (Writer writer = Files.newBufferedWriter(temporary)) {
                 GSON.toJson(this, writer);
             }
             Files.move(temporary, PATH, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException exception) {
+        } catch (Exception exception) {
             ChatCraftClient.LOGGER.error("Could not save ChatCraft config", exception);
         }
     }

@@ -11,9 +11,11 @@ import de.tenkayro.chatcraft.dashboard.ChatCraftDashboardServer;
 import de.tenkayro.chatcraft.input.InputController;
 import de.tenkayro.chatcraft.input.BackgroundModeController;
 import de.tenkayro.chatcraft.twitch.TwitchConnection;
+import de.tenkayro.chatcraft.twitch.TwitchChatFeed;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -27,6 +29,7 @@ public final class ChatCraftClient implements ClientModInitializer {
     private static ActionQueue queue;
     private static CommandService commands;
     private static TwitchConnection twitch;
+    private static TwitchChatFeed chatFeed;
     private static InputController input;
     private static BackgroundModeController backgroundMode;
     private static ActivityLog activity;
@@ -38,19 +41,22 @@ public final class ChatCraftClient implements ClientModInitializer {
         activity = new ActivityLog();
         queue = new ActionQueue();
         commands = new CommandService(new CommandParser(), queue, activity);
-        twitch = new TwitchConnection(commands, queue, activity);
+        chatFeed = new TwitchChatFeed();
+        twitch = new TwitchConnection(commands, queue, activity, chatFeed);
         input = new InputController(queue, activity);
         backgroundMode = new BackgroundModeController(input);
         dashboard = new ChatCraftDashboardServer(activity);
         dashboard.start();
         ClientTickEvents.END_CLIENT_TICK.register(input::tick);
         ClientTickEvents.END_CLIENT_TICK.register(backgroundMode::tick);
+        HudRenderCallback.EVENT.register(chatFeed::render);
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             if (client.player != null) client.player.sendMessage(dashboardMessage(), false);
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> input.releaseAll());
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             twitch.disconnect();
+            chatFeed.close();
             input.releaseAll();
             dashboard.stop();
         });
@@ -62,6 +68,7 @@ public final class ChatCraftClient implements ClientModInitializer {
     public static ActionQueue queue() { return queue; }
     public static CommandService commands() { return commands; }
     public static TwitchConnection twitch() { return twitch; }
+    public static TwitchChatFeed chatFeed() { return chatFeed; }
     public static InputController input() { return input; }
     public static ActivityLog activity() { return activity; }
     public static ChatCraftDashboardServer dashboard() { return dashboard; }

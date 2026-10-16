@@ -35,6 +35,7 @@ function renderStatus(data) {
   $("tokenStatus").textContent = data.tokenConfigured ? "Configured" : "Not configured";
   $("connectionDetail").textContent = data.twitchDetail;
   $("redirectUrl").textContent = data.redirectUrl;
+  $("obsUrl").textContent = data.obsUrl;
   if (!$("clientId").value && data.clientId) $("clientId").value = data.clientId;
   if (!settingsLoaded && data.settings) {
     fillSettings(data.settings);
@@ -229,6 +230,10 @@ $("copyRedirect").addEventListener("click", async () => {
   await navigator.clipboard.writeText($("redirectUrl").textContent);
   $("copyRedirect").textContent = "Copied";
 });
+$("copyObs").addEventListener("click", async () => {
+  await navigator.clipboard.writeText($("obsUrl").textContent);
+  $("copyObs").textContent = "Copied";
+});
 
 for (const button of document.querySelectorAll(".filter")) {
   button.addEventListener("click", () => {
@@ -246,6 +251,27 @@ async function control(action) {
 }
 $("connectButton").addEventListener("click", () => control("connect"));
 $("disconnectButton").addEventListener("click", () => control("disconnect"));
+
+for (const button of document.querySelectorAll(".rule-button")) {
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    const message = $("ruleMessage");
+    try {
+      const value = $(button.dataset.input).value === "true";
+      await api("/api/gamerule", {
+        method: "POST",
+        body: JSON.stringify({ rule: button.dataset.rule, value })
+      });
+      message.textContent = `Requested ${button.dataset.rule} = ${value}. Check Minecraft chat for the result.`;
+      message.className = "message success";
+    } catch (error) {
+      message.textContent = error.message;
+      message.className = "message error";
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
 
 readOauthCallback();
 refresh();

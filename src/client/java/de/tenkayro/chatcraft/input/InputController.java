@@ -14,6 +14,16 @@ import net.minecraft.client.gui.screen.DeathScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Hand;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
@@ -28,6 +38,8 @@ public final class InputController {
     private final CameraController camera = new CameraController();
     private final GuiSlotMapper slots = new GuiSlotMapper();
     private final Map<KeyBinding, Long> heldUntil = new HashMap<>();
+    private BreakTask breakTask;
+    private PlaceTask placeTask;
     private long tick;
 
     public InputController(ActionQueue queue, ActivityLog activity) {
@@ -38,7 +50,9 @@ public final class InputController {
     public void tick(MinecraftClient client) {
         tick++;
         try {
+            camera.tick(client);
             releaseExpired();
+            updateWorldActions(client);
             int budget = 16;
             ChatAction action;
             while (budget-- > 0 && (action = queue.poll()) != null) {
@@ -60,6 +74,7 @@ public final class InputController {
     public void releaseAll() {
         heldUntil.keySet().forEach(key -> key.setPressed(false));
         heldUntil.clear();
+        cancelWorldActions();
     }
 
     private void releaseExpired() {
@@ -90,13 +105,19 @@ public final class InputController {
             case SNEAK -> hold(client.options.sneakKey, duration);
             case SPRINT -> hold(client.options.sprintKey, duration);
             case INVENTORY -> {
-                if (client.currentScreen != null) return "skipped: screen already open";
-                client.setScreen(new InventoryScreen(client.player));
+                if (client.currentScreen == null) client.setScreen(new InventoryScreen(client.player));
+                else client.currentScreen.close();
+            }
+            case CLOSE_SCREEN -> {
+                if (client.currentScreen == null) return "skipped: no screen open";
+                client.currentScreen.close();
             }
             case DROP -> client.player.dropSelectedItem(false);
             case HOTBAR -> selectHotbar(client, Integer.parseInt(action.argument()) - 1);
             case ATTACK -> ((MinecraftClientInvoker) client).chatcraft$doAttack();
             case USE -> ((MinecraftClientInvoker) client).chatcraft$doItemUse();
+            case BREAK -> { return startBreaking(client); }
+            case PLACE -> { return placeBlock(client); }
             case CAMERA_LEFT -> camera.turn(client, -step, 0);
             case CAMERA_RIGHT -> camera.turn(client, step, 0);
             case CAMERA_UP -> camera.turn(client, 0, -step);
@@ -122,6 +143,102 @@ public final class InputController {
         client.player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(slot));
     }
 
+    private String startBreaking(MinecraftClient client) {
+        if (client.currentScreen != null || client.world == null || client.interactionManager == null) {
+            return "skipped: world is not ready";
+        }
+        if (!(client.crosshairTarget instanceof BlockHitResult hit)) return "skipped: no block targeted";
+        BlockPos position = hit.getBlockPos().toImmutable();
+        BlockState state = client.world.getBlockState(position);
+        if (state.isAir()) return "skipped: no block targeted";
+        cancelWorldActions();
+        if (!client.interactionManager.attackBlock(position, hit.getSide())) {
+            return "skipped: block cannot be attacked";
+        }
+        client.options.attackKey.setPressed(true);
+        client.player.swingHand(Hand.MAIN_HAND);
+        breakTask = new BreakTask(position, hit.getSide(), state.getBlock(), tick + 400);
+        return "breaking block";
+    }
+
+    private String placeBlock(MinecraftClient client) {
+        if (client.currentScreen != null || client.world == null || client.interactionManager == null) {
+            return "skipped: world is not ready";
+        }
+        if (!(client.crosshairTarget instanceof BlockHitResult hit)) return "skipped: no block targeted";
+        cancelWorldActions();
+        for (Hand hand : Hand.values()) {
+            ItemStack stack = client.player.getStackInHand(hand);
+            if (!(stack.getItem() instanceof BlockItem blockItem)) continue;
+            ItemPlacementContext placement = new ItemPlacementContext(client.player, hand, stack, hit);
+            BlockPos position = placement.getBlockPos().toImmutable();
+            BlockState previous = client.world.getBlockState(position);
+            ActionResult result = client.interactionManager.interactBlock(client.player, hand, hit);
+            if (!result.isAccepted()) continue;
+            if (result.shouldSwingHand()) client.player.swingHand(hand);
+            placeTask = new PlaceTask(position, blockItem.getBlock(), previous, tick + 40);
+            return "placing block";
+        }
+        return "skipped: no placeable block in either hand";
+    }
+
+    private void updateWorldActions(MinecraftClient client) {
+        if (breakTask != null) updateBreaking(client);
+        if (placeTask != null) updatePlacement(client);
+    }
+
+    private void updateBreaking(MinecraftClient client) {
+        BreakTask task = breakTask;
+        if (client.world == null || client.player == null || client.interactionManager == null) {
+            finishBreaking(client, "cancelled: world closed");
+            return;
+        }
+        if (!client.world.getBlockState(task.position).isOf(task.originalBlock)) {
+            finishBreaking(client, "confirmed: block broken");
+            return;
+        }
+        if (tick >= task.expiresAtTick) {
+            finishBreaking(client, "failed: break timed out");
+            return;
+        }
+        client.interactionManager.updateBlockBreakingProgress(task.position, task.side);
+        if ((tick & 3) == 0) client.player.swingHand(Hand.MAIN_HAND);
+    }
+
+    private void updatePlacement(MinecraftClient client) {
+        PlaceTask task = placeTask;
+        if (client.world == null || client.player == null) {
+            finishPlacement("cancelled: world closed");
+            return;
+        }
+        BlockState current = client.world.getBlockState(task.position);
+        if (current.isOf(task.expectedBlock) && !current.equals(task.previousState)) {
+            finishPlacement("confirmed: block placed");
+            return;
+        }
+        if (tick >= task.expiresAtTick) finishPlacement("failed: placement not confirmed");
+    }
+
+    private void finishBreaking(MinecraftClient client, String result) {
+        client.options.attackKey.setPressed(false);
+        if (client.interactionManager != null) client.interactionManager.cancelBlockBreaking();
+        breakTask = null;
+        activity.add("action", "", "", "BREAK", result);
+    }
+
+    private void finishPlacement(String result) {
+        placeTask = null;
+        activity.add("action", "", "", "PLACE", result);
+    }
+
+    private void cancelWorldActions() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        client.options.attackKey.setPressed(false);
+        if (breakTask != null && client.interactionManager != null) client.interactionManager.cancelBlockBreaking();
+        breakTask = null;
+        placeTask = null;
+    }
+
     private String clickSlot(MinecraftClient client, String label, int button, SlotActionType actionType) {
         if (!(client.currentScreen instanceof HandledScreen<?> screen) || client.interactionManager == null) {
             return "skipped: no container open";
@@ -138,4 +255,7 @@ public final class InputController {
     private static String describe(ChatAction action) {
         return action.argument().isBlank() ? action.type().name() : action.type().name() + " " + action.argument();
     }
+
+    private record BreakTask(BlockPos position, Direction side, Block originalBlock, long expiresAtTick) { }
+    private record PlaceTask(BlockPos position, Block expectedBlock, BlockState previousState, long expiresAtTick) { }
 }

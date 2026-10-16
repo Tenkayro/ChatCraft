@@ -11,6 +11,7 @@ import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
 import de.tenkayro.chatcraft.ChatCraftClient;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
+import net.minecraft.client.MinecraftClient;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
@@ -120,6 +121,9 @@ public final class ChatCraftDashboardServer {
             String path = exchange.getRequestURI().getPath();
             switch (path) {
                 case "/", "/oauth/callback" -> serveDashboard(exchange);
+                case "/obs" -> serveResource(exchange, "/assets/chatcraft/dashboard/obs.html", "text/html; charset=utf-8");
+                case "/obs.js" -> serveResource(exchange, "/assets/chatcraft/dashboard/obs.js", "text/javascript; charset=utf-8");
+                case "/obs.css" -> serveResource(exchange, "/assets/chatcraft/dashboard/obs.css", "text/css; charset=utf-8");
                 case "/app.js" -> serveResource(exchange, "/assets/chatcraft/dashboard/app.js",
                     "text/javascript; charset=utf-8");
                 case "/style.css" -> serveResource(exchange, "/assets/chatcraft/dashboard/style.css",
@@ -128,6 +132,7 @@ public final class ChatCraftDashboardServer {
                 case "/api/oauth/start" -> startOauth(exchange);
                 case "/api/oauth/token" -> saveOauthToken(exchange);
                 case "/api/settings" -> saveSettings(exchange);
+                case "/api/gamerule" -> applyGameRule(exchange);
                 case "/api/token/clear" -> clearToken(exchange);
                 case "/api/control" -> control(exchange);
                 default -> sendText(exchange, 404, "Not found", "text/plain; charset=utf-8");
@@ -164,8 +169,11 @@ public final class ChatCraftDashboardServer {
         payload.put("clientId", config.twitchClientId);
         payload.put("tokenConfigured", !config.oauthToken.isBlank());
         payload.put("redirectUrl", redirectUrl());
+        payload.put("obsUrl", baseUrl() + "/obs");
         payload.put("settings", settingsPayload(config));
         payload.put("events", activity.snapshot());
+        payload.put("chat", ChatCraftClient.chatFeed().webMessages());
+        payload.put("emotes", ChatCraftClient.chatFeed().webEmotes());
         sendJson(exchange, 200, payload);
     }
 
@@ -269,6 +277,27 @@ public final class ChatCraftDashboardServer {
             }
         }
         sendJson(exchange, 200, Map.of("ok", true));
+    }
+
+    private void applyGameRule(HttpExchange exchange) throws IOException {
+        if (!authorizedPost(exchange)) return;
+        JsonObject request = readJson(exchange);
+        String rule = string(request, "rule");
+        if (!rule.equals("keepInventory") && !rule.equals("doImmediateRespawn")) {
+            sendJson(exchange, 400, Map.of("error", "Unsupported game rule"));
+            return;
+        }
+        boolean value = bool(request, "value", false);
+        MinecraftClient client = MinecraftClient.getInstance();
+        client.execute(() -> {
+            if (client.player == null || client.player.networkHandler == null) {
+                activity.add("system", "", "", "Game rule", "failed: no world is open");
+                return;
+            }
+            client.player.networkHandler.sendChatCommand("gamerule " + rule + " " + value);
+            activity.add("system", "", "", "Game rule", rule + " = " + value + " requested");
+        });
+        sendJson(exchange, 200, Map.of("ok", true, "rule", rule, "value", value));
     }
 
     private TokenDetails validateToken(String token) throws IOException, InterruptedException {
@@ -382,8 +411,8 @@ public final class ChatCraftDashboardServer {
         headers.set("X-Content-Type-Options", "nosniff");
         headers.set("X-Frame-Options", "DENY");
         headers.set("Referrer-Policy", "no-referrer");
-        headers.set("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self'; "
-            + "style-src 'self'; script-src 'self'; frame-ancestors 'none'; form-action https://id.twitch.tv");
+        headers.set("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' https://cdn.7tv.app; "
+            + "style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; form-action https://id.twitch.tv");
         exchange.sendResponseHeaders(status, bytes.length);
         exchange.getResponseBody().write(bytes);
     }

@@ -8,4 +8,4 @@ ChatCraft uses Minecraft's own key bindings and slot interaction APIs. It does n
 
 It includes a clean local HTTPS dashboard for configuration, Twitch OAuth setup, connection status, chat messages, command decisions, and executed actions. Mod Menu is only used to select the dashboard port and open the panel.
 
-Full documentation is available in the [ChatCraft Wiki](https://github.com/Tenkayro/ChatCraft/wiki).
+Full documentation is available on the [ChatCraft Guide](https://tenkayro.github.io/ChatCraft/).

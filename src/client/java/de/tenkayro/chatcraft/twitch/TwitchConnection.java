@@ -6,10 +6,6 @@ import de.tenkayro.chatcraft.action.ChatAction;
 import de.tenkayro.chatcraft.command.CommandService;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.dashboard.ActivityLog;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextColor;
 
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -23,6 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -32,6 +29,7 @@ public final class TwitchConnection {
     private final CommandService commands;
     private final ActionQueue queue;
     private final ActivityLog activity;
+    private final TwitchChatFeed chatFeed;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread thread = new Thread(r, "ChatCraft-Twitch");
         thread.setDaemon(true);
@@ -41,16 +39,19 @@ public final class TwitchConnection {
     private volatile State state = State.DISCONNECTED;
     private volatile String detail = "Disconnected";
     private volatile SSLSocket socket;
+    private volatile ScheduledFuture<?> reconnectTask;
     private int reconnectAttempt;
 
-    public TwitchConnection(CommandService commands, ActionQueue queue, ActivityLog activity) {
+    public TwitchConnection(CommandService commands, ActionQueue queue, ActivityLog activity, TwitchChatFeed chatFeed) {
         this.commands = commands;
         this.queue = queue;
         this.activity = activity;
+        this.chatFeed = chatFeed;
     }
 
     public synchronized void connect() {
         if (state == State.CONNECTED || state == State.CONNECTING) return;
+        cancelReconnect();
         ChatCraftConfig config = ChatCraftConfig.get();
         if (normalizeUsername(config.username).isEmpty()) {
             state = State.ERROR;
@@ -66,6 +67,7 @@ public final class TwitchConnection {
 
     public synchronized void disconnect() {
         manualDisconnect.set(true);
+        cancelReconnect();
         closeSocket();
         state = State.DISCONNECTED;
         detail = "Disconnected";
@@ -128,9 +130,10 @@ public final class TwitchConnection {
         if (marker < 0 || messageStart < 0) return;
         String user = "unknown";
         String userColor = "";
+        Map<String, String> tags = Map.of();
         if (line.startsWith("@")) {
             int tagEnd = line.indexOf(' ');
-            Map<String, String> tags = java.util.Arrays.stream(line.substring(1, tagEnd).split(";"))
+            tags = java.util.Arrays.stream(line.substring(1, tagEnd).split(";"))
                 .map(part -> part.split("=", 2))
                 .collect(java.util.stream.Collectors.toMap(p -> p[0], p -> p.length == 2 ? p[1] : "", (a, b) -> b));
             user = decodeTag(tags.getOrDefault("display-name", tags.getOrDefault("login", user)));
@@ -143,17 +146,9 @@ public final class TwitchConnection {
         }
         String message = line.substring(messageStart + 2);
         activity.add("chat", user, message, "", "received");
-        showInMinecraftChat(user, message, userColor);
+        chatFeed.accept(user, message, parseColor(userColor), tags.getOrDefault("badges", ""),
+                tags.getOrDefault("room-id", ""));
         commands.submit(user, message, false);
-    }
-
-    private static void showInMinecraftChat(String user, String message, String colorTag) {
-        int color = parseColor(colorTag);
-        MinecraftClient client = MinecraftClient.getInstance();
-        client.execute(() -> {
-            MutableText username = Text.literal(user).styled(style -> style.withColor(TextColor.fromRgb(color)));
-            client.inGameHud.getChatHud().addMessage(username.append(Text.literal(": " + message)));
-        });
     }
 
     private static int parseColor(String value) {
@@ -199,7 +194,19 @@ public final class TwitchConnection {
         long delay = Math.min(60, 2L << Math.min(reconnectAttempt++, 5));
         detail = "Reconnecting in " + delay + "s";
         activity.add("system", "", "", "Twitch", detail);
-        executor.schedule(this::connect, delay, TimeUnit.SECONDS);
+        reconnectTask = executor.schedule(() -> {
+            synchronized (TwitchConnection.this) {
+                reconnectTask = null;
+                if (manualDisconnect.get()) return;
+            }
+            connect();
+        }, delay, TimeUnit.SECONDS);
+    }
+
+    private synchronized void cancelReconnect() {
+        ScheduledFuture<?> pending = reconnectTask;
+        reconnectTask = null;
+        if (pending != null) pending.cancel(false);
     }
 
     private synchronized void closeSocket() {

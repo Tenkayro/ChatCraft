@@ -39,9 +39,12 @@ public final class CommandParser {
             case "SNEAK", "CROUCH" -> new ChatAction(ChatAction.Type.SNEAK);
             case "SPRINT" -> new ChatAction(ChatAction.Type.SPRINT);
             case "E", "INVENTORY", "INV" -> new ChatAction(ChatAction.Type.INVENTORY);
+            case "ESC", "CLOSE" -> new ChatAction(ChatAction.Type.CLOSE_SCREEN);
             case "Q", "DROP" -> new ChatAction(ChatAction.Type.DROP);
             case "ATTACK", "HIT" -> new ChatAction(ChatAction.Type.ATTACK);
             case "USE", "INTERACT" -> new ChatAction(ChatAction.Type.USE);
+            case "BREAK", "MINE" -> new ChatAction(ChatAction.Type.BREAK);
+            case "PLACE", "BUILD" -> new ChatAction(ChatAction.Type.PLACE);
             case "LEFT", "CAMLEFT" -> new ChatAction(ChatAction.Type.CAMERA_LEFT);
             case "RIGHT", "CAMRIGHT" -> new ChatAction(ChatAction.Type.CAMERA_RIGHT);
             case "UP", "CAMUP" -> new ChatAction(ChatAction.Type.CAMERA_UP);
