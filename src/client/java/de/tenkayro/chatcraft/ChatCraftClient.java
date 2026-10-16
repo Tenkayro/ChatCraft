@@ -81,6 +81,15 @@ public final class ChatCraftClient implements ClientModInitializer {
             .withColor(Formatting.AQUA)
             .withUnderline(true)
             .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, dashboardUrl)));
-        return Text.literal("ChatCraft dashboard: ").append(link);
+        MutableText message = Text.literal("ChatCraft dashboard: ").append(link);
+        String lanUrl = dashboard.lanUrl();
+        if (!lanUrl.isBlank()) {
+            MutableText lanLink = Text.literal(lanUrl).styled(style -> style
+                .withColor(Formatting.GREEN)
+                .withUnderline(true)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, lanUrl)));
+            message.append(Text.literal(" | LAN: ")).append(lanLink);
+        }
+        return message;
     }
 }

@@ -5,6 +5,7 @@ import javax.net.ssl.SSLContext;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -17,6 +18,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 
 final class LocalTlsCertificate {
     private static final byte[] SHA256_WITH_RSA = sequence(oid("1.2.840.113549.1.1.11"), tagged(0x05, new byte[0]));
@@ -25,11 +28,11 @@ final class LocalTlsCertificate {
 
     private LocalTlsCertificate() { }
 
-    static SSLContext createContext() throws Exception {
+    static SSLContext createContext(InetAddress lanAddress) throws Exception {
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
         generator.initialize(2048, new SecureRandom());
         KeyPair pair = generator.generateKeyPair();
-        X509Certificate certificate = createCertificate(pair);
+        X509Certificate certificate = createCertificate(pair, lanAddress);
 
         char[] password = new char[0];
         KeyStore keyStore = KeyStore.getInstance("PKCS12");
@@ -43,14 +46,15 @@ final class LocalTlsCertificate {
         return context;
     }
 
-    private static X509Certificate createCertificate(KeyPair pair) throws Exception {
+    private static X509Certificate createCertificate(KeyPair pair, InetAddress lanAddress) throws Exception {
         Instant now = Instant.now();
         byte[] name = sequence(set(sequence(oid("2.5.4.3"), utf8("ChatCraft localhost"))));
-        byte[] subjectAlternativeNames = sequence(
-            tagged(0x82, "localhost".getBytes(StandardCharsets.US_ASCII)),
-            tagged(0x87, new byte[]{127, 0, 0, 1}),
-            tagged(0x87, new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})
-        );
+        List<byte[]> names = new ArrayList<>();
+        names.add(tagged(0x82, "localhost".getBytes(StandardCharsets.US_ASCII)));
+        names.add(tagged(0x87, new byte[]{127, 0, 0, 1}));
+        names.add(tagged(0x87, new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}));
+        if (lanAddress != null) names.add(tagged(0x87, lanAddress.getAddress()));
+        byte[] subjectAlternativeNames = sequence(names.toArray(byte[][]::new));
         byte[] extensions = tagged(0xA3, sequence(
             sequence(oid("2.5.29.17"), octetString(subjectAlternativeNames)),
             sequence(oid("2.5.29.37"), octetString(sequence(oid("1.3.6.1.5.5.7.3.1"))))

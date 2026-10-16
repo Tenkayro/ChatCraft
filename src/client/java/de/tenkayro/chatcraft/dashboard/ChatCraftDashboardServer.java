@@ -18,7 +18,10 @@ import javax.net.ssl.SSLParameters;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.net.Inet4Address;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -28,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.HexFormat;
+import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -46,6 +50,7 @@ public final class ChatCraftDashboardServer {
     private volatile HttpsServer server;
     private volatile ExecutorService executor;
     private volatile int activePort;
+    private volatile InetAddress lanAddress;
     private volatile String oauthState = "";
     private volatile long oauthExpiresAt;
     private volatile String detail = "Not started";
@@ -59,9 +64,9 @@ public final class ChatCraftDashboardServer {
         int port = ChatCraftConfig.get().dashboardPort;
         activePort = port;
         try {
-            SSLContext sslContext = LocalTlsCertificate.createContext();
-            HttpsServer active = HttpsServer.create(
-                new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
+            lanAddress = findLanAddress();
+            SSLContext sslContext = LocalTlsCertificate.createContext(lanAddress);
+            HttpsServer active = HttpsServer.create(new InetSocketAddress(port), 0);
             active.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
                 @Override
                 public void configure(HttpsParameters parameters) {
@@ -82,7 +87,7 @@ public final class ChatCraftDashboardServer {
             server = active;
             detail = "Running on " + baseUrl();
             activity.add("system", "", "", "Dashboard", detail);
-            ChatCraftClient.LOGGER.info("ChatCraft dashboard started at {}", baseUrl());
+            ChatCraftClient.LOGGER.info("ChatCraft dashboard started at {} (LAN: {})", baseUrl(), lanUrl());
         } catch (Exception exception) {
             detail = "Could not start: " + exception.getClass().getSimpleName();
             activity.add("system", "", "", "Dashboard", detail);
@@ -103,6 +108,10 @@ public final class ChatCraftDashboardServer {
     public boolean running() { return server != null; }
     public String detail() { return detail; }
     public String baseUrl() { return "https://localhost:" + activePort; }
+    public String lanUrl() {
+        InetAddress address = lanAddress;
+        return address == null ? "" : "https://" + address.getHostAddress() + ":" + activePort;
+    }
     public String redirectUrl() { return baseUrl() + "/oauth/callback"; }
 
     public synchronized void restart() {
@@ -114,7 +123,7 @@ public final class ChatCraftDashboardServer {
 
     private void handle(HttpExchange exchange) throws IOException {
         try {
-            if (!exchange.getRemoteAddress().getAddress().isLoopbackAddress()) {
+            if (!allowedClient(exchange.getRemoteAddress().getAddress())) {
                 sendText(exchange, 403, "Forbidden", "text/plain; charset=utf-8");
                 return;
             }
@@ -169,12 +178,35 @@ public final class ChatCraftDashboardServer {
         payload.put("clientId", config.twitchClientId);
         payload.put("tokenConfigured", !config.oauthToken.isBlank());
         payload.put("redirectUrl", redirectUrl());
-        payload.put("obsUrl", baseUrl() + "/obs");
+        payload.put("lanUrl", lanUrl());
+        payload.put("obsUrl", (lanUrl().isBlank() ? baseUrl() : lanUrl()) + "/obs");
         payload.put("settings", settingsPayload(config));
         payload.put("events", activity.snapshot());
         payload.put("chat", ChatCraftClient.chatFeed().webMessages());
         payload.put("emotes", ChatCraftClient.chatFeed().webEmotes());
         sendJson(exchange, 200, payload);
+    }
+
+    private static boolean allowedClient(InetAddress address) {
+        return address.isLoopbackAddress() || address.isSiteLocalAddress() || address.isLinkLocalAddress();
+    }
+
+    private static InetAddress findLanAddress() {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface network = interfaces.nextElement();
+                if (!network.isUp() || network.isLoopback() || network.isVirtual()) continue;
+                Enumeration<InetAddress> addresses = network.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress address = addresses.nextElement();
+                    if (address instanceof Inet4Address && address.isSiteLocalAddress()) return address;
+                }
+            }
+        } catch (SocketException exception) {
+            ChatCraftClient.LOGGER.warn("Could not determine the LAN address", exception);
+        }
+        return null;
     }
 
     private void saveSettings(HttpExchange exchange) throws IOException {

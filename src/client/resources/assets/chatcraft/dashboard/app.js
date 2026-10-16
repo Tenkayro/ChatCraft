@@ -35,6 +35,8 @@ function renderStatus(data) {
   $("tokenStatus").textContent = data.tokenConfigured ? "Configured" : "Not configured";
   $("connectionDetail").textContent = data.twitchDetail;
   $("redirectUrl").textContent = data.redirectUrl;
+  $("lanUrl").textContent = data.lanUrl || "No private LAN address detected";
+  $("copyLan").disabled = !data.lanUrl;
   $("obsUrl").textContent = data.obsUrl;
   if (!$("clientId").value && data.clientId) $("clientId").value = data.clientId;
   if (!settingsLoaded && data.settings) {
@@ -229,6 +231,12 @@ $("copyToken").addEventListener("click", async () => {
 $("copyRedirect").addEventListener("click", async () => {
   await navigator.clipboard.writeText($("redirectUrl").textContent);
   $("copyRedirect").textContent = "Copied";
+});
+$("copyLan").addEventListener("click", async () => {
+  const url = $("lanUrl").textContent;
+  if (!url.startsWith("https://")) return;
+  await navigator.clipboard.writeText(url);
+  $("copyLan").textContent = "Copied";
 });
 $("copyObs").addEventListener("click", async () => {
   await navigator.clipboard.writeText($("obsUrl").textContent);
