@@ -40,7 +40,7 @@ public final class BackgroundModeController {
                 KeyBinding.unpressAll();
                 client.mouse.unlockCursor();
                 if (client.player != null) {
-                    client.player.sendMessage(Text.literal("ChatCraft: cursor released — Minecraft keeps running"), true);
+                    client.player.sendMessage(Text.translatable("message.chatcraft.cursor_released"), true);
                 }
             } else {
                 client.mouse.lockCursor();

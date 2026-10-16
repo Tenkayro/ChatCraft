@@ -1,4 +1,5 @@
 {
   "category.chatcraft": "ChatCraft",
-  "key.chatcraft.release_cursor": "Release cursor / background mode"
+  "key.chatcraft.release_cursor": "Release cursor / background mode",
+  "message.chatcraft.cursor_released": "Cursor released"
 }

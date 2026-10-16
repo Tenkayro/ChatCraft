@@ -1,4 +1,5 @@
 {
   "category.chatcraft": "ChatCraft",
-  "key.chatcraft.release_cursor": "Mauszeiger lösen / Hintergrundmodus"
+  "key.chatcraft.release_cursor": "Mauszeiger lösen / Hintergrundmodus",
+  "message.chatcraft.cursor_released": "Mauszeiger frei"
 }
