@@ -1,122 +1,122 @@
-<!DOCTYPE html>
-<html lang="de">
+<!doctype html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Einfache Übersicht aller ChatCraft-Befehle für Twitch-Zuschauer.">
-  <title>Chat-Befehle – ChatCraft</title>
+  <meta name="description" content="A simple guide to every ChatCraft command for Twitch viewers.">
+  <title>Viewer Commands · ChatCraft</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="viewer-page">
   <header class="top">
     <a class="logo" href="index.html">ChatCraft</a>
-    <nav aria-label="Anleitungen"><a class="active" href="viewer.html">Chat-Befehle</a><a href="streamer.html">Streamer-Setup</a></nav>
+    <nav aria-label="Guides"><a class="active" href="viewer.html">Commands</a><a href="streamer.html">Setup</a></nav>
   </header>
 
   <main class="viewer-guide">
     <header class="viewer-hero">
-      <p class="section-label">ANLEITUNG FÜR ZUSCHAUER</p>
-      <h1>Minecraft direkt über den Twitch-Chat steuern</h1>
-      <p>Schreibe einen Befehl als normale Chat-Nachricht. Groß- und Kleinschreibung sind egal: <code>w</code>, <code>W</code> und <code>forward</code> funktionieren gleich.</p>
-      <div class="start-example" role="group" aria-label="Schnellstart"><span>Zum Ausprobieren einfach das hier senden:</span><code>W</code><b>Der Spieler läuft vorwärts.</b></div>
-      <div class="viewer-rules" role="group" aria-label="Wichtige Regeln">
-        <div><b>Optionales Zeichen davor</b><span>Verlangt der Streamer ein Präfix, schreibe es nur einmal ganz vorne: <code>!W+SPACE</code>.</span></div>
-        <div><b>Nichts geht verloren</b><span>Befehle warten in einer Warteschlange und werden in der Reihenfolge des Chats ausgeführt.</span></div>
-        <div><b>Hinsehen ist wichtig</b><span><code>BREAK</code>, <code>PLACE</code> und <code>USE</code> wirken auf das, was der Spieler gerade anschaut.</span></div>
+      <p class="section-label">VIEWER GUIDE</p>
+      <h1>Control Minecraft from Twitch chat.</h1>
+      <p>Send a command as a normal chat message. Commands are not case-sensitive: <code>w</code>, <code>W</code>, and <code>forward</code> do the same thing.</p>
+      <div class="start-example" role="group" aria-label="Quick start"><span>Try it now</span><code>W</code><b>The player moves forward.</b></div>
+      <div class="viewer-rules" role="group" aria-label="Important rules">
+        <div><b>Optional prefix</b><span>If the streamer uses a prefix, add it once at the start: <code>!W+SPACE</code>.</span></div>
+        <div><b>Nothing gets lost</b><span>Commands enter a queue and run in chat order.</span></div>
+        <div><b>Aim matters</b><span><code>BREAK</code>, <code>PLACE</code>, and <code>USE</code> affect what the player is looking at.</span></div>
       </div>
     </header>
 
     <section class="syntax-section" id="syntax">
-      <p class="section-label">DAS MUSST DU WISSEN</p>
-      <h2>So baust du Befehle zusammen</h2>
+      <p class="section-label">SYNTAX</p>
+      <h2>Build a command</h2>
       <div class="syntax-grid">
-        <article><span class="step-number">1</span><h3>Ein Befehl</h3><code>W</code><p>Führt genau eine Aktion aus.</p></article>
-        <article><span class="step-number">2</span><h3>Nacheinander: Leerzeichen</h3><code>W RIGHT BREAK</code><p>Erst laufen, danach drehen, danach abbauen.</p></article>
-        <article><span class="step-number">3</span><h3>Gleichzeitig: Pluszeichen</h3><code>W+SPACE</code><p>Vorwärtslaufen und gleichzeitig springen.</p></article>
-        <article><span class="step-number">4</span><h3>Dauer: Punkt + Sekunden</h3><code>W.1.5</code><p>Hält Vorwärts genau 1,5 Sekunden gedrückt.</p></article>
+        <article><span class="step-number">1</span><h3>One action</h3><code>W</code><p>Runs one action.</p></article>
+        <article><span class="step-number">2</span><h3>In sequence: space</h3><code>W RIGHT BREAK</code><p>Move, then turn, then break.</p></article>
+        <article><span class="step-number">3</span><h3>At once: plus</h3><code>W+SPACE</code><p>Move forward and jump together.</p></article>
+        <article><span class="step-number">4</span><h3>Duration: dot + seconds</h3><code>W.1.5</code><p>Hold forward for 1.5 seconds.</p></article>
       </div>
-      <div class="important-note"><b>Merksatz:</b> Leerzeichen bedeutet <strong>danach</strong>. <code>+</code> bedeutet <strong>gleichzeitig</strong>.</div>
+      <div class="important-note"><b>Remember:</b> a space means <strong>then</strong>. A <code>+</code> means <strong>at the same time</strong>.</div>
       <div class="copy-examples">
-        <h3>Fertige Beispiele zum Kopieren</h3>
-        <div><code>W+SPRINT</code><span>Vorwärts sprinten</span></div>
-        <div><code>W+SPACE</code><span>Über einen Block springen</span></div>
-        <div><code>W.2 RIGHT BREAK</code><span>2 Sekunden laufen, rechts drehen, Block abbauen</span></div>
-        <div><code>TOWER TOWER</code><span>Zweimal springen und unter sich hochbauen</span></div>
-        <div><code>1 USE</code><span>Hotbar-Platz 1 wählen und den Gegenstand benutzen</span></div>
-        <div><code>E A1 B1 ESC</code><span>Inventar öffnen, zwei Slots anklicken, Inventar schließen</span></div>
+        <h3>Ready-to-use examples</h3>
+        <div><code>W+SPRINT</code><span>Sprint forward</span></div>
+        <div><code>W+SPACE</code><span>Jump over a block</span></div>
+        <div><code>W.2 RIGHT BREAK</code><span>Move for 2 seconds, turn right, break a block</span></div>
+        <div><code>TOWER TOWER</code><span>Jump and build upward twice</span></div>
+        <div><code>1 USE</code><span>Select hotbar slot 1, then use the item</span></div>
+        <div><code>E A1 B1 ESC</code><span>Open inventory, click two slots, close inventory</span></div>
       </div>
     </section>
 
-    <nav class="section-nav" aria-label="Befehlskategorien"><a href="#movement">Bewegung</a><a href="#camera">Kamera</a><a href="#gameplay">Welt</a><a href="#inventory">Inventar &amp; Rezepte</a></nav>
+    <nav class="section-nav" aria-label="Command categories"><a href="#movement">Movement</a><a href="#camera">Camera</a><a href="#gameplay">World</a><a href="#inventory">Inventory &amp; recipes</a></nav>
 
     <section id="movement" class="command-section">
-      <div class="section-heading"><div><p class="section-label">BEWEGUNG</p><h2>Laufen und springen</h2></div><p>Ohne eigene Zeitangabe gilt die vom Streamer eingestellte Dauer.</p></div>
-      <div class="table-wrap"><table class="command-table"><thead><tr><th>Im Chat schreiben</th><th>Geht auch</th><th>Was passiert?</th></tr></thead><tbody>
-        <tr><td><code>W</code></td><td><code>FORWARD</code></td><td>Vorwärts laufen</td></tr>
-        <tr><td><code>S</code></td><td><code>BACK</code> <code>BACKWARD</code></td><td>Rückwärts laufen</td></tr>
-        <tr><td><code>A</code></td><td><code>STRAFELEFT</code></td><td>Nach links laufen</td></tr>
-        <tr><td><code>D</code></td><td><code>STRAFERIGHT</code></td><td>Nach rechts laufen</td></tr>
-        <tr><td><code>SPACE</code></td><td><code>JUMP</code></td><td>Springen</td></tr>
-        <tr><td><code>SPRINT</code></td><td>–</td><td>Sprint-Taste drücken; am besten <code>W+SPRINT</code> verwenden</td></tr>
-        <tr><td><code>SNEAK</code></td><td><code>CROUCH</code></td><td>Schleichen einschalten; erneut senden schaltet es wieder aus</td></tr>
+      <div class="section-heading"><div><p class="section-label">MOVEMENT</p><h2>Move and jump</h2></div><p>Without a custom duration, the streamer's default is used.</p></div>
+      <div class="table-wrap"><table class="command-table"><thead><tr><th>Send in chat</th><th>Aliases</th><th>Result</th></tr></thead><tbody>
+        <tr><td><code>W</code></td><td><code>FORWARD</code></td><td>Move forward</td></tr>
+        <tr><td><code>S</code></td><td><code>BACK</code> <code>BACKWARD</code></td><td>Move backward</td></tr>
+        <tr><td><code>A</code></td><td><code>STRAFELEFT</code></td><td>Move left</td></tr>
+        <tr><td><code>D</code></td><td><code>STRAFERIGHT</code></td><td>Move right</td></tr>
+        <tr><td><code>SPACE</code></td><td><code>JUMP</code></td><td>Jump</td></tr>
+        <tr><td><code>SPRINT</code></td><td>—</td><td>Press sprint; best used as <code>W+SPRINT</code></td></tr>
+        <tr><td><code>SNEAK</code></td><td><code>CROUCH</code></td><td>Toggle sneaking on or off</td></tr>
       </tbody></table></div>
     </section>
 
     <section id="camera" class="command-section">
-      <div class="section-heading"><div><p class="section-label">KAMERA</p><h2>Blickrichtung ändern</h2></div><p>Die normale Drehweite stellt der Streamer ein.</p></div>
-      <div class="table-wrap"><table class="command-table compact-table"><thead><tr><th>Im Chat schreiben</th><th>Geht auch</th><th>Was passiert?</th></tr></thead><tbody>
-        <tr><td><code>LEFT</code></td><td><code>CAMLEFT</code></td><td>Nach links schauen</td></tr>
-        <tr><td><code>RIGHT</code></td><td><code>CAMRIGHT</code></td><td>Nach rechts schauen</td></tr>
-        <tr><td><code>UP</code></td><td><code>CAMUP</code></td><td>Nach oben schauen</td></tr>
-        <tr><td><code>DOWN</code></td><td><code>CAMDOWN</code></td><td>Nach unten schauen</td></tr>
-        <tr><td><code>180</code></td><td><code>AROUND</code> <code>TURNAROUND</code> <code>UTURN</code></td><td>Komplett umdrehen</td></tr>
+      <div class="section-heading"><div><p class="section-label">CAMERA</p><h2>Change direction</h2></div><p>The streamer controls the default turn angle.</p></div>
+      <div class="table-wrap"><table class="command-table compact-table"><thead><tr><th>Send in chat</th><th>Aliases</th><th>Result</th></tr></thead><tbody>
+        <tr><td><code>LEFT</code></td><td><code>CAMLEFT</code></td><td>Look left</td></tr>
+        <tr><td><code>RIGHT</code></td><td><code>CAMRIGHT</code></td><td>Look right</td></tr>
+        <tr><td><code>UP</code></td><td><code>CAMUP</code></td><td>Look up</td></tr>
+        <tr><td><code>DOWN</code></td><td><code>CAMDOWN</code></td><td>Look down</td></tr>
+        <tr><td><code>180</code></td><td><code>AROUND</code> <code>TURNAROUND</code> <code>UTURN</code></td><td>Turn around</td></tr>
       </tbody></table></div>
     </section>
 
     <section id="gameplay" class="command-section">
-      <div class="section-heading"><div><p class="section-label">WELT</p><h2>Abbauen, platzieren und benutzen</h2></div><p>Der Spieler muss auf das richtige Ziel schauen.</p></div>
-      <div class="table-wrap"><table class="command-table"><thead><tr><th>Im Chat schreiben</th><th>Geht auch</th><th>Was passiert?</th></tr></thead><tbody>
-        <tr><td><code>ATTACK</code></td><td><code>HIT</code></td><td>Einmal schlagen, zum Beispiel einen Gegner</td></tr>
-        <tr><td><code>BREAK</code></td><td><code>MINE</code></td><td>Den angesehenen Block vollständig abbauen</td></tr>
-        <tr><td><code>USE</code></td><td><code>INTERACT</code></td><td>Gegenstand benutzen, Tür öffnen, Truhe öffnen usw.</td></tr>
-        <tr><td><code>PLACE</code></td><td><code>BUILD</code></td><td>Einen gehaltenen Block am angesehenen Ziel platzieren</td></tr>
-        <tr><td><code>TOWER</code></td><td><code>PILLAR</code> <code>BUILDUP</code></td><td>Springen und automatisch einen gehaltenen Block unter dem Spieler platzieren</td></tr>
-        <tr><td><code>SPACE+PLACE</code></td><td><code>SPACE+USE</code></td><td>Springen und passend während des Sprungs platzieren/benutzen</td></tr>
-        <tr><td><code>Q</code></td><td><code>DROP</code></td><td>Einen Gegenstand aus der ausgewählten Hand fallen lassen</td></tr>
-        <tr><td><code>1</code> bis <code>9</code></td><td>–</td><td>Diesen Platz in der Hotbar auswählen</td></tr>
-        <tr><td><code>RESPAWN</code></td><td>–</td><td>Nach dem Tod wiederbeleben</td></tr>
+      <div class="section-heading"><div><p class="section-label">WORLD</p><h2>Break, place, and use</h2></div><p>The player must be looking at a valid target.</p></div>
+      <div class="table-wrap"><table class="command-table"><thead><tr><th>Send in chat</th><th>Aliases</th><th>Result</th></tr></thead><tbody>
+        <tr><td><code>ATTACK</code></td><td><code>HIT</code></td><td>Attack once</td></tr>
+        <tr><td><code>BREAK</code></td><td><code>MINE</code></td><td>Break the targeted block completely</td></tr>
+        <tr><td><code>USE</code></td><td><code>INTERACT</code></td><td>Use an item or interact with the target</td></tr>
+        <tr><td><code>PLACE</code></td><td><code>BUILD</code></td><td>Place the held block at the target</td></tr>
+        <tr><td><code>TOWER</code></td><td><code>PILLAR</code> <code>BUILDUP</code></td><td>Jump and place a held block underneath the player</td></tr>
+        <tr><td><code>SPACE+PLACE</code></td><td><code>SPACE+USE</code></td><td>Jump and place or use during the jump</td></tr>
+        <tr><td><code>Q</code></td><td><code>DROP</code></td><td>Drop one item from the selected hand</td></tr>
+        <tr><td><code>1</code> to <code>9</code></td><td>—</td><td>Select a hotbar slot</td></tr>
+        <tr><td><code>RESPAWN</code></td><td>—</td><td>Respawn after death</td></tr>
       </tbody></table></div>
-      <div class="important-note"><b>Hochbauen:</b> Erst einen Block in der Hand halten, dann <code>TOWER</code> senden. Für mehrere Blöcke: <code>TOWER TOWER TOWER</code>.</div>
+      <div class="important-note"><b>Building upward:</b> hold a block, then send <code>TOWER</code>. Repeat it for more height: <code>TOWER TOWER TOWER</code>.</div>
     </section>
 
     <section id="inventory" class="command-section">
-      <div class="section-heading"><div><p class="section-label">INVENTAR &amp; REZEPTE</p><h2>Grüne Beschriftungen abschreiben</h2></div><p>Geöffnete Slots und Rezepte bekommen automatisch grüne Namen.</p></div>
-      <div class="inventory-howto"><h3>So benutzt du das Inventar</h3><ol><li>Sende <code>E</code>.</li><li>Suche die grüne Beschriftung auf dem gewünschten Slot, zum Beispiel <code>B2</code>.</li><li>Sende genau diese Beschriftung in den Chat.</li><li>Mit <code>ESC</code> schließt du das Inventar wieder.</li></ol></div>
-      <div class="table-wrap"><table class="command-table compact-table"><thead><tr><th>Im Chat schreiben</th><th>Geht auch</th><th>Was passiert?</th></tr></thead><tbody>
-        <tr><td><code>E</code></td><td><code>INVENTORY</code> <code>INV</code></td><td>Spieler-Inventar öffnen oder schließen</td></tr>
-        <tr><td><code>ESC</code></td><td><code>CLOSE</code></td><td>Das aktuelle Inventar oder Menü schließen</td></tr>
-        <tr><td><code>A1</code></td><td>Jede sichtbare grüne Slot-Beschriftung</td><td>Diesen Slot normal anklicken</td></tr>
-        <tr><td><code>RA1</code></td><td><code>R</code> vor die Beschriftung</td><td>Diesen Slot rechtsklicken</td></tr>
-        <tr><td><code>SA1</code></td><td><code>S</code> vor die Beschriftung</td><td>Diesen Slot mit Shift anklicken</td></tr>
+      <div class="section-heading"><div><p class="section-label">INVENTORY &amp; RECIPES</p><h2>Use the green labels</h2></div><p>Visible slots and recipes receive short green labels.</p></div>
+      <div class="inventory-howto"><h3>Using the inventory</h3><ol><li>Send <code>E</code>.</li><li>Find the green label on the slot you want, such as <code>B2</code>.</li><li>Send that exact label in chat.</li><li>Send <code>ESC</code> to close the inventory.</li></ol></div>
+      <div class="table-wrap"><table class="command-table compact-table"><thead><tr><th>Send in chat</th><th>Aliases</th><th>Result</th></tr></thead><tbody>
+        <tr><td><code>E</code></td><td><code>INVENTORY</code> <code>INV</code></td><td>Open or close the player inventory</td></tr>
+        <tr><td><code>ESC</code></td><td><code>CLOSE</code></td><td>Close the current inventory or screen</td></tr>
+        <tr><td><code>A1</code></td><td>Any visible green slot label</td><td>Left-click that slot</td></tr>
+        <tr><td><code>RA1</code></td><td>Add <code>R</code> before the label</td><td>Right-click that slot</td></tr>
+        <tr><td><code>SA1</code></td><td>Add <code>S</code> before the label</td><td>Shift-click that slot</td></tr>
       </tbody></table></div>
 
       <div class="recipe-howto">
-        <div><p class="section-label">REZEPTBUCH IN 4 SCHRITTEN</p><ol><li><code>BOOK</code> senden.</li><li>Optional mit <code>T1</code>, <code>T2</code> usw. eine grün markierte Kategorie auswählen.</li><li>Ein sichtbares Rezept mit <code>R1</code> bis <code>R20</code> auswählen.</li><li>Falls Varianten aufklappen, die gewünschte Variante mit <code>V1</code>, <code>V2</code> usw. wählen.</li></ol></div>
-        <div class="mini-command-list"><p><code>RN</code><span>Nächste Rezeptseite</span></p><p><code>RP</code><span>Vorherige Rezeptseite</span></p><p><code>SCROLLDOWN</code> / <code>SCROLLUP</code><span>Verständliche Alternativen für RN/RP</span></p><p><code>T1</code>–<code>T9</code><span>Sichtbare Kategorie auswählen</span></p><p><code>R1</code>–<code>R20</code><span>Sichtbares Rezept auswählen</span></p><p><code>V1</code>–<code>V99</code><span>Geöffnete Rezeptvariante auswählen</span></p></div>
+        <div><p class="section-label">RECIPE BOOK IN 4 STEPS</p><ol><li>Send <code>BOOK</code>.</li><li>Optionally select a green category with <code>T1</code>, <code>T2</code>, and so on.</li><li>Select a visible recipe with <code>R1</code> through <code>R20</code>.</li><li>If variants appear, choose one with <code>V1</code>, <code>V2</code>, and so on.</li></ol></div>
+        <div class="mini-command-list"><p><code>RN</code><span>Next recipe page</span></p><p><code>RP</code><span>Previous recipe page</span></p><p><code>SCROLLDOWN</code> / <code>SCROLLUP</code><span>Long aliases for RN/RP</span></p><p><code>T1</code>–<code>T9</code><span>Select a visible category</span></p><p><code>R1</code>–<code>R20</code><span>Select a visible recipe</span></p><p><code>V1</code>–<code>V99</code><span>Select an open recipe variant</span></p></div>
       </div>
 
       <div class="slot-guide">
-        <div><h3>Beispiel für Slot-Namen</h3><p>Buchstaben sind Spalten, Zahlen sind Zeilen. Entscheidend ist immer die grüne Beschriftung im Spiel.</p><div class="slot-grid" role="group" aria-label="Beispielraster"><span>A1</span><span>B1</span><span>C1</span><span>A2</span><span>B2</span><span>C2</span><span>A3</span><span>B3</span><span>C3</span></div></div>
-        <div class="slot-example"><h3>Drei Klickarten</h3><p><code>B2</code> = normaler Klick</p><p><code>RB2</code> = Rechtsklick</p><p><code>SB2</code> = Shift-Klick</p></div>
+        <div><h3>Slot label example</h3><p>Letters are columns and numbers are rows. Always use the green label shown in-game.</p><div class="slot-grid" role="group" aria-label="Example grid"><span>A1</span><span>B1</span><span>C1</span><span>A2</span><span>B2</span><span>C2</span><span>A3</span><span>B3</span><span>C3</span></div></div>
+        <div class="slot-example"><h3>Three click types</h3><p><code>B2</code> = left-click</p><p><code>RB2</code> = right-click</p><p><code>SB2</code> = shift-click</p></div>
       </div>
     </section>
 
     <section class="troubleshooting">
-      <p class="section-label">WENN NICHTS PASSIERT</p><h2>Die häufigsten Gründe</h2>
-      <div><p><b>Befehl bleibt in der Warteschlange:</b> Eine vorherige Bewegung oder ein <code>BREAK</code>-Befehl läuft noch.</p><p><b>PLACE oder BREAK klappt nicht:</b> Der Spieler schaut auf kein gültiges Ziel.</p><p><b>Rezept wird nicht gefüllt:</b> Zutaten fehlen oder das Rezept passt nicht in das 2×2-Crafting-Feld.</p><p><b>Alle Befehle werden ignoriert:</b> Prüfe, ob der Streamer ein Präfix wie <code>!</code> verlangt.</p></div>
+      <p class="section-label">TROUBLESHOOTING</p><h2>If nothing happens</h2>
+      <div><p><b>The command is waiting:</b> an earlier movement or <code>BREAK</code> action is still running.</p><p><b>PLACE or BREAK fails:</b> the player is not looking at a valid target.</p><p><b>The recipe does not fill:</b> ingredients are missing or it does not fit the 2×2 crafting grid.</p><p><b>Every command is ignored:</b> check whether the streamer requires a prefix such as <code>!</code>.</p></div>
     </section>
 
-    <footer class="viewer-footer"><a href="index.html">Zurück zur Auswahl</a><a href="streamer.html">Streamer-Setup</a></footer>
+    <footer class="viewer-footer"><a href="index.html">All guides</a><a href="streamer.html">Streamer setup</a></footer>
   </main>
 </body>
 </html>

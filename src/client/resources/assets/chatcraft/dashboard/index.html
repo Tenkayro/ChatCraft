@@ -10,7 +10,7 @@
 <body>
   <main>
     <header>
-      <div><h1>ChatCraft</h1><p class="subtitle">Local Twitch control panel</p></div>
+      <div><h1>ChatCraft</h1><p class="subtitle">Minecraft × Twitch</p></div>
       <div id="connectionBadge" class="badge neutral">Loading...</div>
     </header>
     <section class="stats" aria-label="Status">
@@ -20,18 +20,18 @@
       <article><span>Controls</span><strong id="controlsText">-</strong></article>
     </section>
     <section class="panel lan-panel">
-      <div class="panel-heading"><div><h2>LAN access</h2><p class="muted small">Open the dashboard on another device in the same private network.</p></div></div>
+      <div class="panel-heading"><div><h2>LAN access</h2><p class="muted small">Use the panel from another device on your network.</p></div></div>
       <div class="copy-row"><code id="lanUrl">Detecting...</code><button id="copyLan" class="secondary">Copy</button></div>
-      <p class="muted small">Keep Minecraft running. The other device must accept the local HTTPS certificate warning once. Twitch OAuth still uses the localhost URL above.</p>
+      <p class="muted small">Keep Minecraft open. Accept the local certificate once on the other device.</p>
     </section>
     <section class="grid">
       <article class="panel setup-panel">
         <div class="panel-heading"><h2>Twitch setup</h2></div>
-        <p class="step"><strong>1.</strong> <a href="https://dev.twitch.tv/console/apps/create" target="_blank" rel="noreferrer">Create a Twitch application</a> as <b>Public</b> / <b>Chat Bot</b>.</p>
-        <p class="step"><strong>2.</strong> Add this exact OAuth redirect URL:</p>
+        <p class="step"><strong>01</strong> · <a href="https://dev.twitch.tv/console/apps/create" target="_blank" rel="noreferrer">Create a Twitch application</a> as Public / Chat Bot.</p>
+        <p class="step"><strong>02</strong> · Add this exact redirect URL.</p>
         <div class="copy-row"><code id="redirectUrl">Loading...</code><button id="copyRedirect" class="secondary">Copy</button></div>
         <form id="oauthForm">
-          <label for="clientId">3. Paste the Client ID</label>
+          <label for="clientId">03 · Client ID</label>
           <div class="input-row"><input id="clientId" autocomplete="off" spellcheck="false" placeholder="Client ID" required><button type="submit">Authorize</button></div>
         </form>
         <p id="oauthMessage" class="message" role="status"></p>
@@ -69,13 +69,13 @@
           <label><input id="settingSubTnt" type="checkbox"> Sub spawns TNT</label>
           <label><input id="settingPrivilegedCommands" type="checkbox"> Broadcaster/mod commands</label>
         </div>
-        <p class="muted small">Background mode key: F8 by default. Broadcasters and Twitch moderators can use <code>cmd time set day</code> when moderator commands are enabled. Minecraft still requires cheats or operator permission.</p>
+        <p class="muted small">F8 toggles background mode. Broadcasters and moderators can use <code>cmd time set day</code> when commands are enabled. Minecraft still requires permission.</p>
         <p class="warning">Moderator commands can run every Minecraft command your in-game account is allowed to use. Only enable this for moderators you trust.</p>
         <div class="settings-actions"><button type="submit">Save</button><span id="settingsMessage" class="message" role="status"></span></div>
       </form>
     </section>
     <section class="panel event-panel">
-      <div class="panel-heading"><div><h2>Twitch event tests</h2><p class="muted small">The tests use the real action queue. Open a world first; cheats or operator permission are required.</p></div></div>
+      <div class="panel-heading"><div><h2>Event tests</h2><p class="muted small">Uses the real queue. Open a world first.</p></div></div>
       <div class="event-grid">
         <article><strong>Follow</strong><p class="muted small">Fires a firework effect at your position.</p><button class="secondary event-test" data-event="follow">Test follow</button></article>
         <article><strong>Subscription</strong><p class="muted small">Spawns lit TNT five blocks beside you with an immediate firework effect.</p><button class="secondary event-test" data-event="sub">Test subscription</button></article>
@@ -83,7 +83,7 @@
       <p id="eventMessage" class="message" role="status"></p>
     </section>
     <section class="panel world-panel">
-      <div class="panel-heading"><div><h2>World rules</h2><p class="muted small">Requires cheats or server operator permission.</p></div></div>
+      <div class="panel-heading"><div><h2>World rules</h2><p class="muted small">Requires cheats or operator permission.</p></div></div>
       <div class="rule-grid">
         <label>Keep inventory<select id="keepInventory"><option value="true">On</option><option value="false">Off</option></select></label>
         <button class="secondary rule-button" data-rule="keepInventory" data-input="keepInventory">Apply</button>
@@ -93,7 +93,7 @@
       <p id="ruleMessage" class="message" role="status"></p>
     </section>
     <section class="panel obs-panel">
-      <div class="panel-heading"><div><h2>OBS chat overlay</h2><p class="muted small">Add this URL as a browser source. It uses a transparent background.</p></div></div>
+      <div class="panel-heading"><div><h2>OBS overlay</h2><p class="muted small">Add this URL as a transparent browser source.</p></div></div>
       <div class="copy-row"><code id="obsUrl">Loading...</code><button id="copyObs" class="secondary">Copy</button><a class="button-link" href="/obs" target="_blank" rel="noreferrer">Preview</a></div>
     </section>
     <section class="panel activity-panel">
