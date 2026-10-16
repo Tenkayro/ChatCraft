@@ -223,8 +223,6 @@ public final class ChatCraftDashboardServer {
             config.keepRunningUnfocused = bool(request, "keepRunningUnfocused", config.keepRunningUnfocused);
             config.movementDurationTicks = integer(request, "movementDurationTicks", config.movementDurationTicks);
             config.cameraStepDegrees = decimal(request, "cameraStepDegrees", config.cameraStepDegrees);
-            config.queueSize = integer(request, "queueSize", config.queueSize);
-            config.cooldownMillis = longNumber(request, "cooldownMillis", config.cooldownMillis);
             config.whitelist = strings(request, "whitelist");
             config.blacklist = strings(request, "blacklist");
             config.save();
@@ -386,10 +384,6 @@ public final class ChatCraftDashboardServer {
         try { return object.get(key).getAsInt(); } catch (Exception ignored) { return fallback; }
     }
 
-    private static long longNumber(JsonObject object, String key, long fallback) {
-        try { return object.get(key).getAsLong(); } catch (Exception ignored) { return fallback; }
-    }
-
     private static float decimal(JsonObject object, String key, float fallback) {
         try { return object.get(key).getAsFloat(); } catch (Exception ignored) { return fallback; }
     }
@@ -417,8 +411,6 @@ public final class ChatCraftDashboardServer {
         settings.put("keepRunningUnfocused", config.keepRunningUnfocused);
         settings.put("movementDurationTicks", config.movementDurationTicks);
         settings.put("cameraStepDegrees", config.cameraStepDegrees);
-        settings.put("queueSize", config.queueSize);
-        settings.put("cooldownMillis", config.cooldownMillis);
         settings.put("whitelist", config.whitelist);
         settings.put("blacklist", config.blacklist);
         return settings;

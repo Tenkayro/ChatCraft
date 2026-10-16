@@ -119,8 +119,8 @@ public final class TwitchChatFeed {
             if (badge == null) continue;
             ensureBadgeTexture(badge);
             if (badge.texture != null) {
-                context.drawTexture(badge.texture, x, y + 1, 0, 0, BADGE_SIZE, BADGE_SIZE,
-                        badge.width, badge.height);
+                context.drawTexture(badge.texture, x, y + 1, BADGE_SIZE, BADGE_SIZE, 0.0F, 0.0F,
+                        badge.width, badge.height, badge.width, badge.height);
                 x += BADGE_SIZE + BADGE_GAP;
             }
         }
@@ -142,8 +142,8 @@ public final class TwitchChatFeed {
             Identifier texture = emote.texture;
             int emoteWidth = Math.max(8, Math.min(24,
                     Math.round((float) EMOTE_HEIGHT * emote.width / emote.height)));
-            if (texture != null) context.drawTexture(texture, x, y, 0, 0, emoteWidth, EMOTE_HEIGHT,
-                    emote.width, emote.height);
+            if (texture != null) context.drawTexture(texture, x, y, emoteWidth, EMOTE_HEIGHT, 0.0F, 0.0F,
+                    emote.width, emote.height, emote.width, emote.height);
             else context.drawTextWithShadow(client.textRenderer, word, x, y, 0xFFB9A3FF);
             x += (texture != null ? emoteWidth : client.textRenderer.getWidth(word)) + 3;
         }

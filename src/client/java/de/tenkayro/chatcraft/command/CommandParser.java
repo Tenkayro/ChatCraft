@@ -4,22 +4,51 @@ import de.tenkayro.chatcraft.action.ChatAction;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
 
 import java.util.Locale;
-import java.util.Optional;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class CommandParser {
     private static final Pattern SLOT = Pattern.compile("^(R|S)?([A-Z]+[1-9][0-9]*)$");
+    private static final Pattern TIMED = Pattern.compile("^([A-Z]+)\\.([0-9]+(?:[.,][0-9]+)?)$");
 
-    public Optional<ChatAction> parse(String raw) {
-        if (raw == null) return Optional.empty();
+    public List<ChatAction> parse(String raw) {
+        if (raw == null) return List.of();
         String value = raw.trim();
         String prefix = ChatCraftConfig.get().commandPrefix;
         if (!prefix.isEmpty()) {
-            if (!value.startsWith(prefix)) return Optional.empty();
+            if (!value.startsWith(prefix)) return List.of();
             value = value.substring(prefix.length()).trim();
         }
-        String command = value.toUpperCase(Locale.ROOT);
+        if (value.isEmpty()) return List.of();
+        List<ChatAction> sequence = new ArrayList<>();
+        for (String part : value.split("\\s*\\+\\s*", -1)) {
+            ChatAction action = parseSingle(part);
+            if (action == null) return List.of();
+            sequence.add(action);
+        }
+        return List.copyOf(sequence);
+    }
+
+    private ChatAction parseSingle(String raw) {
+        String command = raw.trim().toUpperCase(Locale.ROOT);
+        Matcher timed = TIMED.matcher(command);
+        if (timed.matches()) {
+            ChatAction action = parseCommand(timed.group(1));
+            if (action == null || !supportsDuration(action.type())) return null;
+            try {
+                double seconds = Double.parseDouble(timed.group(2).replace(',', '.'));
+                if (!Double.isFinite(seconds) || seconds <= 0.0 || seconds > 30.0) return null;
+                return new ChatAction(action.type(), action.argument(), Math.max(1, (int) Math.round(seconds * 20.0)));
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return parseCommand(command);
+    }
+
+    private ChatAction parseCommand(String command) {
         Matcher slot = SLOT.matcher(command);
         if (slot.matches()) {
             ChatAction.Type type = switch (slot.group(1) == null ? "" : slot.group(1)) {
@@ -27,10 +56,10 @@ public final class CommandParser {
                 case "S" -> ChatAction.Type.SLOT_SHIFT;
                 default -> ChatAction.Type.SLOT_LEFT;
             };
-            return Optional.of(new ChatAction(type, slot.group(2)));
+            return new ChatAction(type, slot.group(2));
         }
-        if (command.matches("[1-9]")) return Optional.of(new ChatAction(ChatAction.Type.HOTBAR, command));
-        return Optional.ofNullable(switch (command) {
+        if (command.matches("[1-9]")) return new ChatAction(ChatAction.Type.HOTBAR, command);
+        return switch (command) {
             case "W", "FORWARD" -> new ChatAction(ChatAction.Type.FORWARD);
             case "S", "BACK", "BACKWARD" -> new ChatAction(ChatAction.Type.BACK);
             case "A", "STRAFELEFT" -> new ChatAction(ChatAction.Type.LEFT);
@@ -49,8 +78,16 @@ public final class CommandParser {
             case "RIGHT", "CAMRIGHT" -> new ChatAction(ChatAction.Type.CAMERA_RIGHT);
             case "UP", "CAMUP" -> new ChatAction(ChatAction.Type.CAMERA_UP);
             case "DOWN", "CAMDOWN" -> new ChatAction(ChatAction.Type.CAMERA_DOWN);
+            case "180", "AROUND", "TURNAROUND", "UTURN" -> new ChatAction(ChatAction.Type.CAMERA_AROUND);
             case "RESPAWN" -> new ChatAction(ChatAction.Type.RESPAWN);
             default -> null;
-        });
+        };
+    }
+
+    private static boolean supportsDuration(ChatAction.Type type) {
+        return switch (type) {
+            case FORWARD, BACK, LEFT, RIGHT, JUMP, SPRINT -> true;
+            default -> false;
+        };
     }
 }

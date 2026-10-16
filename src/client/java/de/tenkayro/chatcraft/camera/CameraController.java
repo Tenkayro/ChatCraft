@@ -30,4 +30,12 @@ public final class CameraController {
         client.player.setPitch(MathHelper.lerp(factor, client.player.getPitch(), targetPitch));
         remainingTicks--;
     }
+
+    public boolean isTurning() {
+        return remainingTicks > 0;
+    }
+
+    public void cancel() {
+        remainingTicks = 0;
+    }
 }

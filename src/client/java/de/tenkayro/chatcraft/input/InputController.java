@@ -40,6 +40,8 @@ public final class InputController {
     private final Map<KeyBinding, Long> heldUntil = new HashMap<>();
     private BreakTask breakTask;
     private PlaceTask placeTask;
+    private boolean sneakToggled;
+    private long busyUntilTick;
     private long tick;
 
     public InputController(ActionQueue queue, ActivityLog activity) {
@@ -53,15 +55,16 @@ public final class InputController {
             camera.tick(client);
             releaseExpired();
             updateWorldActions(client);
-            int budget = 16;
-            ChatAction action;
-            while (budget-- > 0 && (action = queue.poll()) != null) {
-                try {
-                    String result = execute(client, action);
-                    activity.add("action", "", "", describe(action), result);
-                } catch (RuntimeException exception) {
-                    activity.add("action", "", "", describe(action), "error: " + exception.getClass().getSimpleName());
-                    throw exception;
+            if (!isBusy()) {
+                ChatAction action = queue.poll();
+                if (action != null) {
+                    try {
+                        String result = execute(client, action);
+                        activity.add("action", "", "", describe(action), result);
+                    } catch (RuntimeException exception) {
+                        activity.add("action", "", "", describe(action), "error: " + exception.getClass().getSimpleName());
+                        throw exception;
+                    }
                 }
             }
             if (client.player == null) releaseAll();
@@ -74,6 +77,11 @@ public final class InputController {
     public void releaseAll() {
         heldUntil.keySet().forEach(key -> key.setPressed(false));
         heldUntil.clear();
+        MinecraftClient client = MinecraftClient.getInstance();
+        client.options.sneakKey.setPressed(false);
+        sneakToggled = false;
+        busyUntilTick = 0;
+        camera.cancel();
         cancelWorldActions();
     }
 
@@ -94,7 +102,9 @@ public final class InputController {
             return "released all keys";
         }
         if (client.player == null) return "skipped: no player";
-        int duration = ChatCraftConfig.get().movementDurationTicks;
+        int duration = action.durationTicks() > 0
+                ? action.durationTicks()
+                : ChatCraftConfig.get().movementDurationTicks;
         float step = ChatCraftConfig.get().cameraStepDegrees;
         switch (action.type()) {
             case FORWARD -> hold(client.options.forwardKey, duration);
@@ -102,7 +112,7 @@ public final class InputController {
             case LEFT -> hold(client.options.leftKey, duration);
             case RIGHT -> hold(client.options.rightKey, duration);
             case JUMP -> hold(client.options.jumpKey, duration);
-            case SNEAK -> hold(client.options.sneakKey, duration);
+            case SNEAK -> toggleSneak(client.options.sneakKey);
             case SPRINT -> hold(client.options.sprintKey, duration);
             case INVENTORY -> {
                 if (client.currentScreen == null) client.setScreen(new InventoryScreen(client.player));
@@ -122,6 +132,7 @@ public final class InputController {
             case CAMERA_RIGHT -> camera.turn(client, step, 0);
             case CAMERA_UP -> camera.turn(client, 0, -step);
             case CAMERA_DOWN -> camera.turn(client, 0, step);
+            case CAMERA_AROUND -> camera.turn(client, 180.0f, 0);
             case RESPAWN -> {
                 if (client.currentScreen instanceof DeathScreen) client.player.requestRespawn();
             }
@@ -136,6 +147,16 @@ public final class InputController {
     private void hold(KeyBinding key, int duration) {
         key.setPressed(true);
         heldUntil.merge(key, tick + duration, Math::max);
+        busyUntilTick = Math.max(busyUntilTick, tick + duration);
+    }
+
+    private void toggleSneak(KeyBinding key) {
+        sneakToggled = !sneakToggled;
+        key.setPressed(sneakToggled);
+    }
+
+    private boolean isBusy() {
+        return breakTask != null || placeTask != null || camera.isTurning() || tick < busyUntilTick;
     }
 
     private static void selectHotbar(MinecraftClient client, int slot) {
@@ -253,7 +274,8 @@ public final class InputController {
     }
 
     private static String describe(ChatAction action) {
-        return action.argument().isBlank() ? action.type().name() : action.type().name() + " " + action.argument();
+        String description = action.argument().isBlank() ? action.type().name() : action.type().name() + " " + action.argument();
+        return action.durationTicks() > 0 ? description + " (" + action.durationTicks() + " ticks)" : description;
     }
 
     private record BreakTask(BlockPos position, Direction side, Block originalBlock, long expiresAtTick) { }

@@ -52,8 +52,6 @@ function fillSettings(settings) {
   $("settingPrefix").value = settings.commandPrefix || "";
   $("settingMovement").value = settings.movementDurationTicks;
   $("settingCamera").value = settings.cameraStepDegrees;
-  $("settingQueue").value = settings.queueSize;
-  $("settingCooldown").value = settings.cooldownMillis;
   $("settingWhitelist").value = (settings.whitelist || []).join("\n");
   $("settingBlacklist").value = (settings.blacklist || []).join("\n");
   $("settingControls").checked = settings.controlsEnabled;
@@ -201,8 +199,6 @@ $("settingsForm").addEventListener("submit", async (event) => {
         commandPrefix: $("settingPrefix").value,
         movementDurationTicks: Number($("settingMovement").value),
         cameraStepDegrees: Number($("settingCamera").value),
-        queueSize: Number($("settingQueue").value),
-        cooldownMillis: Number($("settingCooldown").value),
         whitelist: nameList($("settingWhitelist").value),
         blacklist: nameList($("settingBlacklist").value),
         controlsEnabled: $("settingControls").checked,

@@ -17,10 +17,10 @@
     <header class="viewer-hero">
       <p class="section-label">VIEWER COMMANDS</p>
       <h1>Play Minecraft through Twitch chat</h1>
-      <p>Send one command per chat message. Commands are not case-sensitive.</p>
+      <p>Send one command or a <code>+</code>-separated sequence per chat message. Commands are not case-sensitive.</p>
       <div class="viewer-rules" aria-label="Command rules">
         <div><b>Prefix</b><span>Use the streamer's prefix if enabled, for example <code>!W</code>.</span></div>
-        <div><b>Cooldown</b><span>Wait if ChatCraft rejects commands sent too quickly.</span></div>
+        <div><b>Queue</b><span>Every valid command waits its turn; commands are never dropped by a cooldown.</span></div>
         <div><b>Target</b><span>World actions affect whatever the player is currently looking at.</span></div>
       </div>
     </header>
@@ -31,6 +31,7 @@
 
     <section id="movement" class="command-section">
       <div class="section-heading"><div><p class="section-label">MOVEMENT</p><h2>Move the player</h2></div><p>Movement lasts for the duration configured by the streamer.</p></div>
+      <p><b>Sequences:</b> <code>W + JUMP</code> runs forward and then jumps. Add seconds with a dot, for example <code>W.1 + JUMP</code> holds forward for exactly one second before jumping. Decimal durations such as <code>W.0.5</code> are supported up to 30 seconds.</p>
       <div class="table-wrap"><table class="command-table">
         <thead><tr><th>Type in chat</th><th>Also works</th><th>Result</th></tr></thead>
         <tbody>
@@ -39,7 +40,7 @@
           <tr><td><code>A</code></td><td><code>STRAFELEFT</code></td><td>Strafe left</td></tr>
           <tr><td><code>D</code></td><td><code>STRAFERIGHT</code></td><td>Strafe right</td></tr>
           <tr><td><code>JUMP</code></td><td><code>SPACE</code></td><td>Jump</td></tr>
-          <tr><td><code>SNEAK</code></td><td><code>CROUCH</code></td><td>Sneak</td></tr>
+          <tr><td><code>SNEAK</code></td><td><code>CROUCH</code></td><td>Toggle sneaking on or off</td></tr>
           <tr><td><code>SPRINT</code></td><td>-</td><td>Sprint</td></tr>
         </tbody>
       </table></div>
@@ -54,6 +55,7 @@
           <tr><td><code>RIGHT</code></td><td><code>CAMRIGHT</code></td><td>Look right</td></tr>
           <tr><td><code>UP</code></td><td><code>CAMUP</code></td><td>Look up</td></tr>
           <tr><td><code>DOWN</code></td><td><code>CAMDOWN</code></td><td>Look down</td></tr>
+          <tr><td><code>180</code></td><td><code>AROUND</code> <code>TURNAROUND</code> <code>UTURN</code></td><td>Turn around 180 degrees</td></tr>
         </tbody>
       </table></div>
     </section>

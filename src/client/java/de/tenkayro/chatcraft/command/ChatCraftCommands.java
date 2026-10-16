@@ -36,7 +36,7 @@ public final class ChatCraftCommands {
                     .then(ClientCommandManager.argument("command", StringArgumentType.greedyString()).executes(context -> {
                         String command = StringArgumentType.getString(context, "command");
                         boolean accepted = ChatCraftClient.commands().submit("local-test", command, true);
-                        context.getSource().sendFeedback(Text.literal(accepted ? "ChatCraft: queued " + command : "ChatCraft: unknown command or queue full"));
+                        context.getSource().sendFeedback(Text.literal(accepted ? "ChatCraft: queued " + command : "ChatCraft: unknown command"));
                         return accepted ? 1 : 0;
                     })))
                 .then(ClientCommandManager.literal("clearqueue").executes(context -> {
