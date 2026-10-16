@@ -6,6 +6,10 @@ import de.tenkayro.chatcraft.action.ChatAction;
 import de.tenkayro.chatcraft.command.CommandService;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.dashboard.ActivityLog;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
+import net.minecraft.text.TextColor;
 
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -123,12 +127,14 @@ public final class TwitchConnection {
         int messageStart = line.indexOf(" :", marker + 9);
         if (marker < 0 || messageStart < 0) return;
         String user = "unknown";
+        String userColor = "";
         if (line.startsWith("@")) {
             int tagEnd = line.indexOf(' ');
             Map<String, String> tags = java.util.Arrays.stream(line.substring(1, tagEnd).split(";"))
                 .map(part -> part.split("=", 2))
                 .collect(java.util.stream.Collectors.toMap(p -> p[0], p -> p.length == 2 ? p[1] : "", (a, b) -> b));
-            user = tags.getOrDefault("display-name", tags.getOrDefault("login", user));
+            user = decodeTag(tags.getOrDefault("display-name", tags.getOrDefault("login", user)));
+            userColor = tags.getOrDefault("color", "");
         }
         if (user.equals("unknown")) {
             int bang = line.indexOf('!');
@@ -137,7 +143,52 @@ public final class TwitchConnection {
         }
         String message = line.substring(messageStart + 2);
         activity.add("chat", user, message, "", "received");
+        showInMinecraftChat(user, message, userColor);
         commands.submit(user, message, false);
+    }
+
+    private static void showInMinecraftChat(String user, String message, String colorTag) {
+        int color = parseColor(colorTag);
+        MinecraftClient client = MinecraftClient.getInstance();
+        client.execute(() -> {
+            MutableText username = Text.literal(user).styled(style -> style.withColor(TextColor.fromRgb(color)));
+            client.inGameHud.getChatHud().addMessage(username.append(Text.literal(": " + message)));
+        });
+    }
+
+    private static int parseColor(String value) {
+        if (value != null && value.matches("#[0-9A-Fa-f]{6}")) {
+            try {
+                return Integer.parseInt(value.substring(1), 16);
+            } catch (NumberFormatException ignored) { }
+        }
+        return 0x9146FF;
+    }
+
+    private static String decodeTag(String value) {
+        StringBuilder decoded = new StringBuilder(value.length());
+        boolean escaped = false;
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (!escaped && character == '\\') {
+                escaped = true;
+                continue;
+            }
+            if (escaped) {
+                decoded.append(switch (character) {
+                    case 's' -> ' ';
+                    case ':' -> ';';
+                    case 'r' -> '\r';
+                    case 'n' -> '\n';
+                    default -> character;
+                });
+                escaped = false;
+            } else {
+                decoded.append(character);
+            }
+        }
+        if (escaped) decoded.append('\\');
+        return decoded.toString();
     }
 
     private void scheduleReconnect() {
