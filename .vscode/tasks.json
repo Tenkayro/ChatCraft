@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ChatCraft: Build",
+      "type": "shell",
+      "command": "$env:JAVA_HOME='C:\\Users\\turte\\.jdks\\jdk-21.0.12.1+1'; .\\gradlew.bat build",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$javac"]
+    },
+    {
+      "label": "ChatCraft: Run Client",
+      "type": "shell",
+      "command": "$env:JAVA_HOME='C:\\Users\\turte\\.jdks\\jdk-21.0.12.1+1'; .\\gradlew.bat runClient",
+      "problemMatcher": []
+    }
+  ]
+}

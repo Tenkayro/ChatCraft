@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "de.tenkayro.chatcraft.mixin",
+  "refmap": "client-chatcraft-refmap.json",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "HandledScreenMixin",
+    "MinecraftClientInvoker"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

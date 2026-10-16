@@ -1,0 +1,10 @@
+{
+  "java.jdt.ls.java.home": "C:\\Users\\turte\\.jdks\\jdk-21.0.12.1+1",
+  "java.import.gradle.java.home": "C:\\Users\\turte\\.jdks\\jdk-21.0.12.1+1",
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.compile.nullAnalysis.mode": "automatic",
+  "files.exclude": {
+    "**/.gradle": true,
+    "**/build": true
+  }
+}

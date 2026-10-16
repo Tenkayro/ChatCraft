@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "chatcraft",
+	"version": "${version}",
+	"name": "ChatCraft",
+	"description": "Lets Twitch chat directly control the Minecraft client.",
+	"authors": [
+		"tenkayro"
+	],
+	"license": "CC0-1.0",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"de.tenkayro.chatcraft.ChatCraftClient"
+		],
+		"modmenu": [
+			"de.tenkayro.chatcraft.config.ChatCraftModMenu"
+		]
+	},
+	"mixins": [
+		"chatcraft.client.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*",
+		"modmenu": ">=11.0.0"
+	}
+}
