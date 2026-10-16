@@ -2,6 +2,7 @@ package de.tenkayro.chatcraft.mixin;
 
 import net.minecraft.client.gui.screen.recipebook.AnimatedResultButton;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookResults;
+import net.minecraft.client.gui.screen.recipebook.RecipeAlternativesWidget;
 import net.minecraft.client.gui.widget.ToggleButtonWidget;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
@@ -18,4 +19,7 @@ public interface RecipeBookResultsAccessor {
 
     @Accessor("prevPageButton")
     ToggleButtonWidget chatcraft$getPrevPageButton();
+
+    @Accessor("alternatesWidget")
+    RecipeAlternativesWidget chatcraft$getAlternatesWidget();
 }

@@ -12,7 +12,9 @@ import java.util.regex.Pattern;
 
 public final class CommandParser {
     private static final Pattern SLOT = Pattern.compile("^(R|S)?([A-Z]+[1-9][0-9]*)$");
-    private static final Pattern RECIPE = Pattern.compile("^RECIPE([1-9]|1[0-9]|20)$");
+    private static final Pattern RECIPE = Pattern.compile("^(?:R|RECIPE)([1-9]|1[0-9]|20)$");
+    private static final Pattern RECIPE_ALTERNATIVE = Pattern.compile("^V([1-9][0-9]?)$");
+    private static final Pattern RECIPE_CATEGORY = Pattern.compile("^T([1-9])$");
     private static final Pattern TIMED = Pattern.compile("^([A-Z]+)\\.([0-9]+(?:[.,][0-9]+)?)$");
     private static final Pattern INVISIBLE_DUPLICATE_MARKERS = Pattern.compile("[\\u034F\\u200B\\u2060\\uFEFF]");
 
@@ -78,6 +80,10 @@ public final class CommandParser {
     private ChatAction parseCommand(String command) {
         Matcher recipe = RECIPE.matcher(command);
         if (recipe.matches()) return new ChatAction(ChatAction.Type.RECIPE_SELECT, recipe.group(1));
+        Matcher alternative = RECIPE_ALTERNATIVE.matcher(command);
+        if (alternative.matches()) return new ChatAction(ChatAction.Type.RECIPE_ALTERNATIVE, alternative.group(1));
+        Matcher category = RECIPE_CATEGORY.matcher(command);
+        if (category.matches()) return new ChatAction(ChatAction.Type.RECIPE_CATEGORY, category.group(1));
         Matcher slot = SLOT.matcher(command);
         if (slot.matches()) {
             ChatAction.Type type = switch (slot.group(1) == null ? "" : slot.group(1)) {
@@ -104,8 +110,10 @@ public final class CommandParser {
             case "BREAK", "MINE" -> new ChatAction(ChatAction.Type.BREAK);
             case "PLACE", "BUILD" -> new ChatAction(ChatAction.Type.PLACE);
             case "RECIPEBOOK", "RECIPES", "BOOK" -> new ChatAction(ChatAction.Type.RECIPE_BOOK);
-            case "RECIPENEXT", "NEXTRECIPE" -> new ChatAction(ChatAction.Type.RECIPE_NEXT);
-            case "RECIPEBACK", "RECIPEPREV", "PREVRECIPE" -> new ChatAction(ChatAction.Type.RECIPE_PREVIOUS);
+            case "RN", "RECIPENEXT", "NEXTRECIPE", "SCROLLDOWN", "PAGEDOWN" ->
+                    new ChatAction(ChatAction.Type.RECIPE_NEXT);
+            case "RP", "RECIPEBACK", "RECIPEPREV", "PREVRECIPE", "SCROLLUP", "PAGEUP" ->
+                    new ChatAction(ChatAction.Type.RECIPE_PREVIOUS);
             case "LEFT", "CAMLEFT" -> new ChatAction(ChatAction.Type.CAMERA_LEFT);
             case "RIGHT", "CAMRIGHT" -> new ChatAction(ChatAction.Type.CAMERA_RIGHT);
             case "UP", "CAMUP" -> new ChatAction(ChatAction.Type.CAMERA_UP);

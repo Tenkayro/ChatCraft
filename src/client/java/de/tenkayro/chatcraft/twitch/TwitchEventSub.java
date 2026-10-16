@@ -2,6 +2,7 @@ package de.tenkayro.chatcraft.twitch;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonArray;
 import de.tenkayro.chatcraft.ChatCraftClient;
 import de.tenkayro.chatcraft.action.ActionQueue;
 import de.tenkayro.chatcraft.action.ChatAction;
@@ -25,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Receives follow and subscription notifications that are not regular IRC chat messages. */
 public final class TwitchEventSub {
+    public enum State { DISCONNECTED, CONNECTING, CONNECTED, AUTH_REQUIRED, ERROR }
     private static final URI WEBSOCKET_URI = URI.create("wss://eventsub.wss.twitch.tv/ws");
     private static final URI VALIDATE_URI = URI.create("https://id.twitch.tv/oauth2/validate");
     private static final URI SUBSCRIPTIONS_URI = URI.create("https://api.twitch.tv/helix/eventsub/subscriptions");
@@ -42,6 +44,8 @@ public final class TwitchEventSub {
     private final ArrayDeque<String> seenOrder = new ArrayDeque<>();
     private final Set<String> seenMessages = new HashSet<>();
     private volatile WebSocket socket;
+    private volatile State state = State.DISCONNECTED;
+    private volatile String detail = "Disconnected";
 
     public TwitchEventSub(ActionQueue queue, ActivityLog activity) {
         this.queue = queue;
@@ -53,6 +57,8 @@ public final class TwitchEventSub {
         if (config.oauthToken.isBlank() || config.twitchClientId.isBlank()) return;
         disconnect();
         enabled.set(true);
+        state = State.CONNECTING;
+        detail = "Connecting follow events";
         open(WEBSOCKET_URI);
     }
 
@@ -61,7 +67,12 @@ public final class TwitchEventSub {
         WebSocket current = socket;
         socket = null;
         if (current != null) current.sendClose(WebSocket.NORMAL_CLOSURE, "disconnect");
+        state = State.DISCONNECTED;
+        detail = "Disconnected";
     }
+
+    public State state() { return state; }
+    public String detail() { return detail; }
 
     public void testFollow() {
         enqueueFollow("TestFollower", true);
@@ -76,6 +87,8 @@ public final class TwitchEventSub {
         http.newWebSocketBuilder().connectTimeout(Duration.ofSeconds(10)).buildAsync(uri, new Listener())
                 .whenComplete((webSocket, error) -> {
                     if (error != null && enabled.get()) {
+                        state = State.ERROR;
+                        detail = "Could not connect to Twitch EventSub";
                         activity.add("system", "", "", "EventSub", "connection failed");
                         ChatCraftClient.LOGGER.warn("Could not connect to Twitch EventSub", error);
                     } else if (webSocket != null) {
@@ -123,12 +136,28 @@ public final class TwitchEventSub {
                     .GET().build();
             HttpResponse<String> validated = http.send(validation, HttpResponse.BodyHandlers.ofString());
             if (validated.statusCode() != 200) throw new IllegalStateException("token validation failed");
-            String userId = string(JsonParser.parseString(validated.body()).getAsJsonObject(), "user_id");
+            JsonObject token = JsonParser.parseString(validated.body()).getAsJsonObject();
+            String userId = string(token, "user_id");
             if (userId.isBlank()) throw new IllegalStateException("token has no Twitch user id");
+            JsonArray scopes = token.has("scopes") && token.get("scopes").isJsonArray()
+                    ? token.getAsJsonArray("scopes") : new JsonArray();
+            boolean canReadFollowers = false;
+            for (var scope : scopes) {
+                if ("moderator:read:followers".equals(scope.getAsString())) canReadFollowers = true;
+            }
+            if (!canReadFollowers) {
+                authorizationRequired("Follow permission is missing; re-authorize Twitch in the web panel");
+                return;
+            }
             createSubscription(config, sessionId, "channel.follow", "2", userId, true);
+            state = State.CONNECTED;
+            detail = "Follow events connected";
             activity.add("system", "", "", "EventSub", "follow events connected");
+        } catch (AuthorizationException exception) {
+            authorizationRequired("Twitch rejected the follow permission; re-authorize Twitch in the web panel");
         } catch (Exception exception) {
-            activity.add("system", "", "", "EventSub", "subscription failed; re-authorize Twitch");
+            stopAfterFailure(State.ERROR, "Follow events failed: " + exception.getClass().getSimpleName());
+            activity.add("system", "", "", "EventSub", detail);
             ChatCraftClient.LOGGER.warn("Could not subscribe to Twitch EventSub", exception);
         }
     }
@@ -153,9 +182,27 @@ public final class TwitchEventSub {
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body.toString())).build();
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() == 401 || response.statusCode() == 403) {
+            throw new AuthorizationException();
+        }
         if (response.statusCode() != 202) {
             throw new IllegalStateException(type + " returned " + response.statusCode() + ": " + response.body());
         }
+    }
+
+    private void authorizationRequired(String reason) {
+        stopAfterFailure(State.AUTH_REQUIRED, reason);
+        activity.add("system", "", "", "EventSub", reason);
+        ChatCraftClient.LOGGER.warn("Twitch follow events disabled: {}", reason);
+    }
+
+    private void stopAfterFailure(State failedState, String reason) {
+        enabled.set(false);
+        WebSocket current = socket;
+        socket = null;
+        if (current != null) current.sendClose(WebSocket.NORMAL_CLOSURE, "subscription unavailable");
+        state = failedState;
+        detail = reason;
     }
 
     private synchronized boolean remember(String id) {
@@ -223,4 +270,6 @@ public final class TwitchEventSub {
             if (enabled.get()) ChatCraftClient.LOGGER.warn("Twitch EventSub WebSocket error", error);
         }
     }
+
+    private static final class AuthorizationException extends Exception { }
 }

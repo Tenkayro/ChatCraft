@@ -150,6 +150,8 @@ public final class InputController {
             case PLACE -> { return placeBlock(client); }
             case RECIPE_BOOK -> { return recipes.toggle(client); }
             case RECIPE_SELECT -> { return recipes.select(client, Integer.parseInt(action.argument())); }
+            case RECIPE_ALTERNATIVE -> { return recipes.selectAlternative(client, Integer.parseInt(action.argument())); }
+            case RECIPE_CATEGORY -> { return recipes.selectCategory(client, Integer.parseInt(action.argument())); }
             case RECIPE_NEXT -> { return recipes.changePage(client, true); }
             case RECIPE_PREVIOUS -> { return recipes.changePage(client, false); }
             case CAMERA_LEFT -> camera.turn(client, -step, 0);

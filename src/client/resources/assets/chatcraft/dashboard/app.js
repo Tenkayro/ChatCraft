@@ -32,8 +32,13 @@ function renderStatus(data) {
   $("queueText").textContent = data.queueSize;
   $("usernameText").textContent = data.username || "Not configured";
   $("controlsText").textContent = data.controlsEnabled ? "Enabled" : "Disabled";
-  $("tokenStatus").textContent = data.tokenConfigured ? "Configured" : "Not configured";
-  $("connectionDetail").textContent = data.twitchDetail;
+  const eventState = data.eventSubState || "DISCONNECTED";
+  $("tokenStatus").textContent = eventState === "AUTH_REQUIRED"
+    ? "Re-authorize required"
+    : data.tokenConfigured ? "Configured" : "Not configured";
+  $("connectionDetail").textContent = eventState === "AUTH_REQUIRED"
+    ? `${data.twitchDetail} · ${data.eventSubDetail}`
+    : data.twitchDetail;
   $("redirectUrl").textContent = data.redirectUrl;
   $("lanUrl").textContent = data.lanUrl || "No private LAN address detected";
   $("copyLan").disabled = !data.lanUrl;

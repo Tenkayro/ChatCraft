@@ -2,12 +2,14 @@ package de.tenkayro.chatcraft.gui;
 
 import de.tenkayro.chatcraft.mixin.RecipeBookResultsAccessor;
 import de.tenkayro.chatcraft.mixin.RecipeBookWidgetAccessor;
-import de.tenkayro.chatcraft.mixin.AnimatedResultButtonAccessor;
+import de.tenkayro.chatcraft.mixin.RecipeAlternativesWidgetAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.gui.screen.recipebook.AnimatedResultButton;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookResults;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
+import net.minecraft.client.gui.screen.recipebook.RecipeAlternativesWidget;
+import net.minecraft.client.gui.screen.recipebook.RecipeGroupButtonWidget;
 import net.minecraft.client.gui.widget.ClickableWidget;
 
 import java.util.List;
@@ -44,12 +46,42 @@ public final class RecipeBookController {
     public String changePage(MinecraftClient client, boolean next) {
         RecipeBookWidget book = openBook(client);
         if (book == null) return "skipped: recipe book is not ready";
+        book.refresh();
         RecipeBookResultsAccessor area = results(book);
         ClickableWidget button = next ? area.chatcraft$getNextPageButton() : area.chatcraft$getPrevPageButton();
         if (button == null || !button.visible || !button.active || !click(book, button)) {
             return "skipped: no " + (next ? "next" : "previous") + " recipe page";
         }
         return next ? "next recipe page" : "previous recipe page";
+    }
+
+    public String selectCategory(MinecraftClient client, int oneBasedIndex) {
+        RecipeBookWidget book = openBook(client);
+        if (book == null) return "skipped: recipe book is not ready";
+        book.refresh();
+        List<RecipeGroupButtonWidget> buttons = ((RecipeBookWidgetAccessor) book).chatcraft$getTabButtons()
+                .stream().filter(button -> button.visible && button.active).toList();
+        int index = oneBasedIndex - 1;
+        if (index < 0 || index >= buttons.size()) return "skipped: invalid recipe category";
+        if (!click(book, buttons.get(index))) return "skipped: category is not available";
+        return "selected recipe category " + oneBasedIndex;
+    }
+
+    public String selectAlternative(MinecraftClient client, int oneBasedIndex) {
+        RecipeBookWidget book = openBook(client);
+        if (book == null) return "skipped: recipe book is not ready";
+        RecipeAlternativesWidget alternatives = results(book).chatcraft$getAlternatesWidget();
+        if (alternatives == null || !alternatives.isVisible()) return "skipped: no recipe variants are open";
+        List<ClickableWidget> buttons = ((RecipeAlternativesWidgetAccessor) alternatives)
+                .chatcraft$getAlternativeButtons().stream()
+                .filter(button -> button.visible && button.active).toList();
+        int index = oneBasedIndex - 1;
+        if (index < 0 || index >= buttons.size()) return "skipped: invalid recipe variant";
+        ClickableWidget button = buttons.get(index);
+        if (!click(book, button)) {
+            return "skipped: recipe variant is not available";
+        }
+        return "selected recipe variant " + oneBasedIndex;
     }
 
     private static RecipeBookWidget openBook(MinecraftClient client) {
@@ -81,7 +113,7 @@ public final class RecipeBookController {
 
     private static boolean isUsable(AnimatedResultButton button) {
         return button.visible && button.active
-                && ((AnimatedResultButtonAccessor) button).chatcraft$getResultCollection() != null
+                && button.getResultCollection() != null
                 && button.hasResults();
     }
 }

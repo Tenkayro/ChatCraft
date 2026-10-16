@@ -173,6 +173,8 @@ public final class ChatCraftDashboardServer {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("twitchState", ChatCraftClient.twitch().state().name());
         payload.put("twitchDetail", ChatCraftClient.twitch().detail());
+        payload.put("eventSubState", ChatCraftClient.eventSub().state().name());
+        payload.put("eventSubDetail", ChatCraftClient.eventSub().detail());
         payload.put("queueSize", ChatCraftClient.queue().size());
         payload.put("username", config.username);
         payload.put("controlsEnabled", config.controlsEnabled);
@@ -294,6 +296,9 @@ public final class ChatCraftDashboardServer {
         oauthState = "";
         oauthExpiresAt = 0;
         activity.add("system", "", "", "OAuth", "token saved for " + validated.login());
+        if (ChatCraftClient.twitch().state() == de.tenkayro.chatcraft.twitch.TwitchConnection.State.CONNECTED) {
+            ChatCraftClient.eventSub().connect();
+        }
         sendJson(exchange, 200, Map.of("ok", true, "username", validated.login(),
             "expiresIn", validated.expiresIn()));
     }
