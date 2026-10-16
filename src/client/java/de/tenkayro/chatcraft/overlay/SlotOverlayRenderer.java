@@ -12,7 +12,22 @@ public final class SlotOverlayRenderer {
     private static final float LABEL_SCALE = 0.75F;
     private static final long MOVE_DURATION_NANOS = 180_000_000L;
     private static final long CLICK_DURATION_NANOS = 350_000_000L;
-    private static final long VISIBLE_DURATION_NANOS = 2_500_000_000L;
+    private static final String[] POINTER_PIXELS = {
+            "X...........",
+            "XX..........",
+            "XWX.........",
+            "XWWX........",
+            "XWWWX.......",
+            "XWWWWX......",
+            "XWWWWWX.....",
+            "XWWWWWWX....",
+            "XWWXXXXXX...",
+            "XWWX........",
+            "XWX.X.......",
+            "XX..X.......",
+            "X...X.......",
+            "....XX......"
+    };
     private static final GuiSlotMapper MAPPER = new GuiSlotMapper();
     private static CursorState cursor;
 
@@ -60,7 +75,7 @@ public final class SlotOverlayRenderer {
                                             int originX, int originY) {
         CursorState state = cursor;
         long now = System.nanoTime();
-        if (state == null || state.screen != screen || now - state.startedAt > VISIBLE_DURATION_NANOS) return;
+        if (state == null || state.screen != screen) return;
 
         float progress = progress(now, state.startedAt);
         int cursorX = originX + Math.round(lerp(state.startX, state.targetX, progress));
@@ -79,25 +94,27 @@ public final class SlotOverlayRenderer {
 
         ItemStack cursorStack = screen.getScreenHandler().getCursorStack();
         if (!cursorStack.isEmpty()) {
-            int itemX = cursorX + 10;
-            int itemY = cursorY + 7;
-            context.fill(itemX - 1, itemY - 1, itemX + 17, itemY + 17, 0xE0000000);
-            drawBorder(context, itemX - 1, itemY - 1, 18, 18, 0xFF55FF55);
+            int itemX = cursorX + 11;
+            int itemY = cursorY;
             context.drawItemInSlot(client.textRenderer, cursorStack, itemX, itemY);
         }
         drawPointer(context, cursorX, cursorY);
     }
 
     private static void drawPointer(DrawContext context, int x, int y) {
-        int[] widths = {1, 2, 3, 4, 5, 6, 7, 8, 6, 4, 4, 3};
-        for (int row = 0; row < widths.length; row++) {
-            context.fill(x, y + row, x + widths[row] + 2, y + row + 1, 0xFF101010);
-            if (row > 0 && row < 9 && widths[row] > 2) {
-                context.fill(x + 1, y + row, x + widths[row], y + row + 1, 0xFFFFFFFF);
+        for (int row = 0; row < POINTER_PIXELS.length; row++) {
+            String pixels = POINTER_PIXELS[row];
+            for (int column = 0; column < pixels.length(); column++) {
+                int color = switch (pixels.charAt(column)) {
+                    case 'X' -> 0xFF101010;
+                    case 'W' -> 0xFFFFFFFF;
+                    default -> 0;
+                };
+                if (color != 0) {
+                    context.fill(x + column, y + row, x + column + 1, y + row + 1, color);
+                }
             }
         }
-        context.fill(x + 4, y + 8, x + 7, y + 14, 0xFF101010);
-        context.fill(x + 5, y + 8, x + 6, y + 13, 0xFFFFFFFF);
     }
 
     private static void drawBorder(DrawContext context, int x, int y, int width, int height, int color) {

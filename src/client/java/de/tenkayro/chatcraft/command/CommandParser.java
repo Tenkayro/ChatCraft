@@ -1,5 +1,6 @@
 package de.tenkayro.chatcraft.command;
 
+import de.tenkayro.chatcraft.action.ActionGroup;
 import de.tenkayro.chatcraft.action.ChatAction;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
 
@@ -11,10 +12,11 @@ import java.util.regex.Pattern;
 
 public final class CommandParser {
     private static final Pattern SLOT = Pattern.compile("^(R|S)?([A-Z]+[1-9][0-9]*)$");
+    private static final Pattern RECIPE = Pattern.compile("^RECIPE([1-9]|1[0-9]|20)$");
     private static final Pattern TIMED = Pattern.compile("^([A-Z]+)\\.([0-9]+(?:[.,][0-9]+)?)$");
     private static final Pattern INVISIBLE_DUPLICATE_MARKERS = Pattern.compile("[\\u034F\\u200B\\u2060\\uFEFF]");
 
-    public List<ChatAction> parse(String raw) {
+    public List<ActionGroup> parse(String raw) {
         if (raw == null) return List.of();
         String value = sanitizeMessage(raw).trim();
         String prefix = ChatCraftConfig.get().commandPrefix;
@@ -23,11 +25,23 @@ public final class CommandParser {
             value = value.substring(prefix.length()).trim();
         }
         if (value.isEmpty()) return List.of();
-        List<ChatAction> sequence = new ArrayList<>();
-        for (String part : value.split("\\s*\\+\\s*", -1)) {
-            ChatAction action = parseSingle(part);
-            if (action == null) return List.of();
-            sequence.add(action);
+        String normalized = value.replaceAll("\\s*\\+\\s*", "+");
+        List<ActionGroup> sequence = new ArrayList<>();
+        for (String step : normalized.split("\\s+")) {
+            String upperStep = step.toUpperCase(Locale.ROOT);
+            if (upperStep.equals("TOWER") || upperStep.equals("PILLAR") || upperStep.equals("BUILDUP")) {
+                sequence.add(new ActionGroup(List.of(
+                        new ChatAction(ChatAction.Type.JUMP),
+                        new ChatAction(ChatAction.Type.PLACE, "below"))));
+                continue;
+            }
+            List<ChatAction> simultaneous = new ArrayList<>();
+            for (String part : step.split("\\+", -1)) {
+                ChatAction action = parseSingle(part);
+                if (action == null) return List.of();
+                simultaneous.add(action);
+            }
+            sequence.add(new ActionGroup(simultaneous));
         }
         return List.copyOf(sequence);
     }
@@ -55,6 +69,8 @@ public final class CommandParser {
     }
 
     private ChatAction parseCommand(String command) {
+        Matcher recipe = RECIPE.matcher(command);
+        if (recipe.matches()) return new ChatAction(ChatAction.Type.RECIPE_SELECT, recipe.group(1));
         Matcher slot = SLOT.matcher(command);
         if (slot.matches()) {
             ChatAction.Type type = switch (slot.group(1) == null ? "" : slot.group(1)) {
@@ -80,6 +96,9 @@ public final class CommandParser {
             case "USE", "INTERACT" -> new ChatAction(ChatAction.Type.USE);
             case "BREAK", "MINE" -> new ChatAction(ChatAction.Type.BREAK);
             case "PLACE", "BUILD" -> new ChatAction(ChatAction.Type.PLACE);
+            case "RECIPEBOOK", "RECIPES", "BOOK" -> new ChatAction(ChatAction.Type.RECIPE_BOOK);
+            case "RECIPENEXT", "NEXTRECIPE" -> new ChatAction(ChatAction.Type.RECIPE_NEXT);
+            case "RECIPEBACK", "RECIPEPREV", "PREVRECIPE" -> new ChatAction(ChatAction.Type.RECIPE_PREVIOUS);
             case "LEFT", "CAMLEFT" -> new ChatAction(ChatAction.Type.CAMERA_LEFT);
             case "RIGHT", "CAMRIGHT" -> new ChatAction(ChatAction.Type.CAMERA_RIGHT);
             case "UP", "CAMUP" -> new ChatAction(ChatAction.Type.CAMERA_UP);

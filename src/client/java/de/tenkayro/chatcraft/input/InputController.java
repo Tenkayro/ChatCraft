@@ -1,12 +1,14 @@
 package de.tenkayro.chatcraft.input;
 
 import de.tenkayro.chatcraft.ChatCraftClient;
+import de.tenkayro.chatcraft.action.ActionGroup;
 import de.tenkayro.chatcraft.action.ActionQueue;
 import de.tenkayro.chatcraft.action.ChatAction;
 import de.tenkayro.chatcraft.camera.CameraController;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.dashboard.ActivityLog;
 import de.tenkayro.chatcraft.gui.GuiSlotMapper;
+import de.tenkayro.chatcraft.gui.RecipeBookController;
 import de.tenkayro.chatcraft.mixin.MinecraftClientInvoker;
 import de.tenkayro.chatcraft.overlay.SlotOverlayRenderer;
 import net.minecraft.client.MinecraftClient;
@@ -24,12 +26,14 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 public final class InputController {
@@ -37,9 +41,11 @@ public final class InputController {
     private final ActivityLog activity;
     private final CameraController camera = new CameraController();
     private final GuiSlotMapper slots = new GuiSlotMapper();
+    private final RecipeBookController recipes = new RecipeBookController();
     private final Map<KeyBinding, Long> heldUntil = new HashMap<>();
     private BreakTask breakTask;
     private PlaceTask placeTask;
+    private DelayedInteraction delayedInteraction;
     private boolean sneakToggled;
     private long busyUntilTick;
     private long tick;
@@ -56,16 +62,8 @@ public final class InputController {
             releaseExpired();
             updateWorldActions(client);
             if (!isBusy()) {
-                ChatAction action = queue.poll();
-                if (action != null) {
-                    try {
-                        String result = execute(client, action);
-                        activity.add("action", "", "", describe(action), result);
-                    } catch (RuntimeException exception) {
-                        activity.add("action", "", "", describe(action), "error: " + exception.getClass().getSimpleName());
-                        throw exception;
-                    }
-                }
+                ActionGroup group = queue.poll();
+                if (group != null) executeGroup(client, group);
             }
             if (client.player == null) releaseAll();
         } catch (RuntimeException exception) {
@@ -83,6 +81,26 @@ public final class InputController {
         busyUntilTick = 0;
         camera.cancel();
         cancelWorldActions();
+    }
+
+    private void executeGroup(MinecraftClient client, ActionGroup group) {
+        List<ChatAction> actions = group.actions();
+        boolean jumping = actions.stream().anyMatch(action -> action.type() == ChatAction.Type.JUMP);
+        for (ChatAction action : actions) {
+            try {
+                if (jumping && (action.type() == ChatAction.Type.PLACE || action.type() == ChatAction.Type.USE)) {
+                    delayedInteraction = new DelayedInteraction(action.type(), action.argument().equals("below"),
+                            tick + 2, tick + 16);
+                    activity.add("action", "", "", describe(action), "waiting for jump");
+                    continue;
+                }
+                String result = execute(client, action);
+                activity.add("action", "", "", describe(action), result);
+            } catch (RuntimeException exception) {
+                activity.add("action", "", "", describe(action), "error: " + exception.getClass().getSimpleName());
+                throw exception;
+            }
+        }
     }
 
     private void releaseExpired() {
@@ -128,6 +146,10 @@ public final class InputController {
             case USE -> ((MinecraftClientInvoker) client).chatcraft$doItemUse();
             case BREAK -> { return startBreaking(client); }
             case PLACE -> { return placeBlock(client); }
+            case RECIPE_BOOK -> { return recipes.toggle(client); }
+            case RECIPE_SELECT -> { return recipes.select(client, Integer.parseInt(action.argument())); }
+            case RECIPE_NEXT -> { return recipes.changePage(client, true); }
+            case RECIPE_PREVIOUS -> { return recipes.changePage(client, false); }
             case CAMERA_LEFT -> camera.turn(client, -step, 0);
             case CAMERA_RIGHT -> camera.turn(client, step, 0);
             case CAMERA_UP -> camera.turn(client, 0, -step);
@@ -156,7 +178,8 @@ public final class InputController {
     }
 
     private boolean isBusy() {
-        return breakTask != null || placeTask != null || camera.isTurning() || tick < busyUntilTick;
+        return breakTask != null || placeTask != null || delayedInteraction != null
+                || camera.isTurning() || tick < busyUntilTick;
     }
 
     private static void selectHotbar(MinecraftClient client, int slot) {
@@ -187,6 +210,23 @@ public final class InputController {
             return "skipped: world is not ready";
         }
         if (!(client.crosshairTarget instanceof BlockHitResult hit)) return "skipped: no block targeted";
+        return placeBlockAt(client, hit);
+    }
+
+    private String placeBlockBelowPlayer(MinecraftClient client) {
+        if (client.currentScreen != null || client.world == null || client.player == null
+                || client.interactionManager == null) {
+            return "skipped: world is not ready";
+        }
+        BlockPos support = client.player.getBlockPos().down();
+        int searched = 0;
+        while (searched++ < 5 && client.world.getBlockState(support).isAir()) support = support.down();
+        if (client.world.getBlockState(support).isAir()) return "skipped: no supporting block below";
+        Vec3d hitPosition = Vec3d.ofCenter(support).add(0.0, 0.5, 0.0);
+        return placeBlockAt(client, new BlockHitResult(hitPosition, Direction.UP, support, false));
+    }
+
+    private String placeBlockAt(MinecraftClient client, BlockHitResult hit) {
         cancelWorldActions();
         for (Hand hand : Hand.values()) {
             ItemStack stack = client.player.getStackInHand(hand);
@@ -204,8 +244,28 @@ public final class InputController {
     }
 
     private void updateWorldActions(MinecraftClient client) {
+        if (delayedInteraction != null) updateDelayedInteraction(client);
         if (breakTask != null) updateBreaking(client);
         if (placeTask != null) updatePlacement(client);
+    }
+
+    private void updateDelayedInteraction(MinecraftClient client) {
+        DelayedInteraction task = delayedInteraction;
+        if (tick < task.nextAttemptTick) return;
+        delayedInteraction = null;
+        if (task.type == ChatAction.Type.USE) {
+            if (client.player != null) ((MinecraftClientInvoker) client).chatcraft$doItemUse();
+            activity.add("action", "", "", "USE", "executed during jump");
+            return;
+        }
+        String result = task.belowPlayer ? placeBlockBelowPlayer(client) : placeBlock(client);
+        if (placeTask != null) {
+            activity.add("action", "", "", "PLACE", result + " during jump");
+        } else if (tick < task.expiresAtTick) {
+            delayedInteraction = new DelayedInteraction(task.type, task.belowPlayer, tick + 1, task.expiresAtTick);
+        } else {
+            activity.add("action", "", "", "PLACE", "failed: could not place during jump");
+        }
     }
 
     private void updateBreaking(MinecraftClient client) {
@@ -258,6 +318,7 @@ public final class InputController {
         if (breakTask != null && client.interactionManager != null) client.interactionManager.cancelBlockBreaking();
         breakTask = null;
         placeTask = null;
+        delayedInteraction = null;
     }
 
     private String clickSlot(MinecraftClient client, String label, int button, SlotActionType actionType) {
@@ -280,4 +341,6 @@ public final class InputController {
 
     private record BreakTask(BlockPos position, Direction side, Block originalBlock, long expiresAtTick) { }
     private record PlaceTask(BlockPos position, Block expectedBlock, BlockState previousState, long expiresAtTick) { }
+    private record DelayedInteraction(ChatAction.Type type, boolean belowPlayer,
+                                      long nextAttemptTick, long expiresAtTick) { }
 }

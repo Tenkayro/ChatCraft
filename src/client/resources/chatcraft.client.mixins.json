@@ -5,7 +5,9 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "HandledScreenMixin",
-    "MinecraftClientInvoker"
+    "MinecraftClientInvoker",
+    "RecipeBookResultsAccessor",
+    "RecipeBookWidgetAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

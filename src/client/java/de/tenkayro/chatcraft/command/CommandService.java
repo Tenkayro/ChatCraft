@@ -1,6 +1,7 @@
 package de.tenkayro.chatcraft.command;
 
 import de.tenkayro.chatcraft.action.ActionQueue;
+import de.tenkayro.chatcraft.action.ActionGroup;
 import de.tenkayro.chatcraft.action.ChatAction;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.dashboard.ActivityLog;
@@ -25,11 +26,11 @@ public final class CommandService {
         String normalizedUser = user == null ? "unknown" : user.toLowerCase(Locale.ROOT);
         if (!config.controlsEnabled && !bypassPolicy) return rejected(normalizedUser, message, "controls disabled");
         if (!bypassPolicy && !config.userAllowed(normalizedUser)) return rejected(normalizedUser, message, "user blocked");
-        List<ChatAction> actions = parser.parse(message);
-        if (actions.isEmpty()) return rejected(normalizedUser, message, "not a command");
-        queue.offerAll(actions);
+        List<ActionGroup> sequence = parser.parse(message);
+        if (sequence.isEmpty()) return rejected(normalizedUser, message, "not a command");
+        queue.offerAll(sequence);
         activity.add("command", normalizedUser, message,
-                actions.stream().map(CommandService::describe).collect(Collectors.joining(" -> ")), "queued");
+                sequence.stream().map(CommandService::describeGroup).collect(Collectors.joining(" -> ")), "queued");
         return true;
     }
 
@@ -41,5 +42,9 @@ public final class CommandService {
     private static String describe(ChatAction action) {
         String description = action.argument().isBlank() ? action.type().name() : action.type().name() + " " + action.argument();
         return action.durationTicks() > 0 ? description + " (" + action.durationTicks() + " ticks)" : description;
+    }
+
+    private static String describeGroup(ActionGroup group) {
+        return group.actions().stream().map(CommandService::describe).collect(Collectors.joining(" + "));
     }
 }
