@@ -33,7 +33,7 @@ public final class ChatCraftConfig {
     public boolean autoReconnect = true;
     public boolean keepRunningUnfocused = true;
     public int movementDurationTicks = 10;
-    public float cameraStepDegrees = 15.0f;
+    public float cameraStepDegrees = 30.0f;
     public int queueSize = 128;
     public long cooldownMillis = 500;
     public List<String> whitelist = new ArrayList<>();
