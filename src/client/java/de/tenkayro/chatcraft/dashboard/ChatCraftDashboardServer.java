@@ -142,6 +142,7 @@ public final class ChatCraftDashboardServer {
                 case "/api/oauth/token" -> saveOauthToken(exchange);
                 case "/api/settings" -> saveSettings(exchange);
                 case "/api/gamerule" -> applyGameRule(exchange);
+                case "/api/event/test" -> testEvent(exchange);
                 case "/api/token/clear" -> clearToken(exchange);
                 case "/api/control" -> control(exchange);
                 default -> sendText(exchange, 404, "Not found", "text/plain; charset=utf-8");
@@ -221,6 +222,8 @@ public final class ChatCraftDashboardServer {
             config.autoConnect = bool(request, "autoConnect", config.autoConnect);
             config.autoReconnect = bool(request, "autoReconnect", config.autoReconnect);
             config.keepRunningUnfocused = bool(request, "keepRunningUnfocused", config.keepRunningUnfocused);
+            config.followMobEnabled = bool(request, "followMobEnabled", config.followMobEnabled);
+            config.subTntEnabled = bool(request, "subTntEnabled", config.subTntEnabled);
             config.movementDurationTicks = integer(request, "movementDurationTicks", config.movementDurationTicks);
             config.cameraStepDegrees = decimal(request, "cameraStepDegrees", config.cameraStepDegrees);
             config.whitelist = strings(request, "whitelist");
@@ -261,7 +264,7 @@ public final class ChatCraftDashboardServer {
         String url = "https://id.twitch.tv/oauth2/authorize?response_type=token"
             + "&client_id=" + encode(clientId)
             + "&redirect_uri=" + encode(redirectUrl())
-            + "&scope=" + encode("chat:read")
+            + "&scope=" + encode("chat:read moderator:read:followers")
             + "&state=" + encode(oauthState);
         sendJson(exchange, 200, Map.of("url", url, "state", oauthState));
     }
@@ -330,6 +333,26 @@ public final class ChatCraftDashboardServer {
         sendJson(exchange, 200, Map.of("ok", true, "rule", rule, "value", value));
     }
 
+    private void testEvent(HttpExchange exchange) throws IOException {
+        if (!authorizedPost(exchange)) return;
+        String event = string(readJson(exchange), "event");
+        ChatCraftConfig config = ChatCraftConfig.get();
+        if ((event.equals("follow") && !config.followMobEnabled)
+                || (event.equals("sub") && !config.subTntEnabled)) {
+            sendJson(exchange, 409, Map.of("error", "Enable this event in Settings first"));
+            return;
+        }
+        switch (event) {
+            case "follow" -> ChatCraftClient.eventSub().testFollow();
+            case "sub" -> ChatCraftClient.eventSub().testSub();
+            default -> {
+                sendJson(exchange, 400, Map.of("error", "Unknown event type"));
+                return;
+            }
+        }
+        sendJson(exchange, 200, Map.of("ok", true, "event", event));
+    }
+
     private TokenDetails validateToken(String token) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder(URI.create("https://id.twitch.tv/oauth2/validate"))
             .timeout(Duration.ofSeconds(10))
@@ -342,10 +365,12 @@ public final class ChatCraftDashboardServer {
         String clientId = string(json, "client_id");
         JsonArray scopes = json.has("scopes") && json.get("scopes").isJsonArray()
             ? json.getAsJsonArray("scopes") : new JsonArray();
-        boolean canReadChat = false;
-        for (var scope : scopes) if ("chat:read".equals(scope.getAsString())) canReadChat = true;
-        if (login.isBlank() || !canReadChat || !Objects.equals(clientId, ChatCraftConfig.get().twitchClientId)) {
-            throw new IOException("Token login, Client ID, or chat:read scope is invalid");
+        java.util.Set<String> granted = new java.util.HashSet<>();
+        for (var scope : scopes) granted.add(scope.getAsString());
+        boolean requiredScopes = granted.contains("chat:read")
+                && granted.contains("moderator:read:followers");
+        if (login.isBlank() || !requiredScopes || !Objects.equals(clientId, ChatCraftConfig.get().twitchClientId)) {
+            throw new IOException("Token login, Client ID, or required Twitch permissions are invalid");
         }
         long expiresIn = json.has("expires_in") ? json.get("expires_in").getAsLong() : 0;
         return new TokenDetails(login, expiresIn);
@@ -409,6 +434,8 @@ public final class ChatCraftDashboardServer {
         settings.put("autoConnect", config.autoConnect);
         settings.put("autoReconnect", config.autoReconnect);
         settings.put("keepRunningUnfocused", config.keepRunningUnfocused);
+        settings.put("followMobEnabled", config.followMobEnabled);
+        settings.put("subTntEnabled", config.subTntEnabled);
         settings.put("movementDurationTicks", config.movementDurationTicks);
         settings.put("cameraStepDegrees", config.cameraStepDegrees);
         settings.put("whitelist", config.whitelist);

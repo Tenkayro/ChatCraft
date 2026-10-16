@@ -59,6 +59,8 @@ function fillSettings(settings) {
   $("settingAutoConnect").checked = settings.autoConnect;
   $("settingAutoReconnect").checked = settings.autoReconnect;
   $("settingKeepRunning").checked = settings.keepRunningUnfocused;
+  $("settingFollowMob").checked = settings.followMobEnabled;
+  $("settingSubTnt").checked = settings.subTntEnabled;
 }
 
 function nameList(value) {
@@ -205,7 +207,9 @@ $("settingsForm").addEventListener("submit", async (event) => {
         overlayEnabled: $("settingOverlay").checked,
         autoConnect: $("settingAutoConnect").checked,
         autoReconnect: $("settingAutoReconnect").checked,
-        keepRunningUnfocused: $("settingKeepRunning").checked
+        keepRunningUnfocused: $("settingKeepRunning").checked,
+        followMobEnabled: $("settingFollowMob").checked,
+        subTntEnabled: $("settingSubTnt").checked
       })
     });
     fillSettings(data.settings);
@@ -268,6 +272,27 @@ for (const button of document.querySelectorAll(".rule-button")) {
       });
       message.textContent = `Requested ${button.dataset.rule} = ${value}. Check Minecraft chat for the result.`;
       message.className = "message success";
+    } catch (error) {
+      message.textContent = error.message;
+      message.className = "message error";
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
+for (const button of document.querySelectorAll(".event-test")) {
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    const message = $("eventMessage");
+    try {
+      await api("/api/event/test", {
+        method: "POST",
+        body: JSON.stringify({ event: button.dataset.event })
+      });
+      message.textContent = `${button.dataset.event === "follow" ? "Follow" : "Subscription"} test added to the queue.`;
+      message.className = "message success";
+      await refresh();
     } catch (error) {
       message.textContent = error.message;
       message.className = "message error";

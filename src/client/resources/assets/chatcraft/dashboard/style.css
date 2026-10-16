@@ -62,6 +62,10 @@ button.danger { color: var(--red); }
 .detail { min-height: 48px; padding: 13px; background: #0e0e14; border: 1px solid var(--line); border-radius: 9px; }
 .control-panel .button-row { margin-bottom: 20px; }
 .settings-panel, .world-panel, .obs-panel { margin-bottom: 12px; }
+.event-panel { margin-bottom: 12px; }
+.event-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.event-grid article { padding: 14px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; }
+.event-grid p { margin: 7px 0 12px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .form-grid label { margin: 0; }
 .form-grid label input, .form-grid label textarea { margin-top: 7px; }
@@ -96,7 +100,7 @@ td:first-child { color: var(--muted); white-space: nowrap; }
   header { align-items: flex-start; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .grid { grid-template-columns: 1fr; }
-  .form-grid, .toggles, .rule-grid { grid-template-columns: 1fr; }
+  .form-grid, .toggles, .rule-grid, .event-grid { grid-template-columns: 1fr; }
   .activity-heading { align-items: flex-start; flex-direction: column; gap: 14px; }
   .filters { justify-content: flex-start; }
   .input-row { align-items: stretch; flex-direction: column; }

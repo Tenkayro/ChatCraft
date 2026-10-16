@@ -31,6 +31,7 @@ public final class TwitchConnection {
     private final ActionQueue queue;
     private final ActivityLog activity;
     private final TwitchChatFeed chatFeed;
+    private final TwitchEventSub eventSub;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread thread = new Thread(r, "ChatCraft-Twitch");
         thread.setDaemon(true);
@@ -43,11 +44,13 @@ public final class TwitchConnection {
     private volatile ScheduledFuture<?> reconnectTask;
     private int reconnectAttempt;
 
-    public TwitchConnection(CommandService commands, ActionQueue queue, ActivityLog activity, TwitchChatFeed chatFeed) {
+    public TwitchConnection(CommandService commands, ActionQueue queue, ActivityLog activity, TwitchChatFeed chatFeed,
+                            TwitchEventSub eventSub) {
         this.commands = commands;
         this.queue = queue;
         this.activity = activity;
         this.chatFeed = chatFeed;
+        this.eventSub = eventSub;
     }
 
     public synchronized void connect() {
@@ -73,6 +76,7 @@ public final class TwitchConnection {
         state = State.DISCONNECTED;
         detail = "Disconnected";
         reconnectAttempt = 0;
+        eventSub.disconnect();
         queue.offerPriority(new ChatAction(ChatAction.Type.RELEASE_ALL));
         activity.add("system", "", "", "Twitch", "disconnected");
     }
@@ -100,6 +104,7 @@ public final class TwitchConnection {
             reconnectAttempt = 0;
             ChatCraftClient.LOGGER.info("Connected to Twitch channel #{}", channel);
             activity.add("system", "", "", "Twitch", "connected to #" + channel);
+            if (!anonymous) eventSub.connect();
             try (BufferedReader input = new BufferedReader(new InputStreamReader(active.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while (!manualDisconnect.get() && (line = input.readLine()) != null) {
@@ -126,17 +131,17 @@ public final class TwitchConnection {
     }
 
     private void handleLine(String line) {
+        Map<String, String> tags = parseTags(line);
+        if (line.contains(" USERNOTICE ")) {
+            handleUserNotice(tags);
+            return;
+        }
         int marker = line.indexOf(" PRIVMSG ");
         int messageStart = line.indexOf(" :", marker + 9);
         if (marker < 0 || messageStart < 0) return;
         String user = "unknown";
         String userColor = "";
-        Map<String, String> tags = Map.of();
         if (line.startsWith("@")) {
-            int tagEnd = line.indexOf(' ');
-            tags = java.util.Arrays.stream(line.substring(1, tagEnd).split(";"))
-                .map(part -> part.split("=", 2))
-                .collect(java.util.stream.Collectors.toMap(p -> p[0], p -> p.length == 2 ? p[1] : "", (a, b) -> b));
             user = decodeTag(tags.getOrDefault("display-name", tags.getOrDefault("login", user)));
             userColor = tags.getOrDefault("color", "");
         }
@@ -150,6 +155,25 @@ public final class TwitchConnection {
         chatFeed.accept(user, message, parseColor(userColor), tags.getOrDefault("badges", ""),
                 tags.getOrDefault("room-id", ""));
         commands.submit(user, message, false);
+    }
+
+    private void handleUserNotice(Map<String, String> tags) {
+        String type = tags.getOrDefault("msg-id", "");
+        if (!java.util.Set.of("sub", "resub", "subgift", "anonsubgift", "giftpaidupgrade",
+                "anongiftpaidupgrade", "primepaidupgrade").contains(type)) return;
+        String user = decodeTag(tags.getOrDefault("display-name",
+                tags.getOrDefault("msg-param-recipient-display-name", "subscriber")));
+        eventSub.enqueueSub(user, false, tags.getOrDefault("id", ""));
+    }
+
+    private static Map<String, String> parseTags(String line) {
+        if (!line.startsWith("@")) return Map.of();
+        int tagEnd = line.indexOf(' ');
+        if (tagEnd < 1) return Map.of();
+        return java.util.Arrays.stream(line.substring(1, tagEnd).split(";"))
+                .map(part -> part.split("=", 2))
+                .collect(java.util.stream.Collectors.toMap(p -> p[0],
+                        p -> p.length == 2 ? p[1] : "", (a, b) -> b));
     }
 
     private static int parseColor(String value) {

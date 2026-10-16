@@ -161,9 +161,34 @@ public final class InputController {
             case SLOT_LEFT -> { return clickSlot(client, action.argument(), 0, SlotActionType.PICKUP); }
             case SLOT_RIGHT -> { return clickSlot(client, action.argument(), 1, SlotActionType.PICKUP); }
             case SLOT_SHIFT -> { return clickSlot(client, action.argument(), 0, SlotActionType.QUICK_MOVE); }
+            case FOLLOW_EVENT -> { return runFollowEvent(client, action.argument()); }
+            case SUB_EVENT -> { return runSubEvent(client, action.argument()); }
             default -> { }
         }
         return "executed";
+    }
+
+    private String runFollowEvent(MinecraftClient client, String username) {
+        if (!ChatCraftConfig.get().followMobEnabled) return "skipped: follow event disabled";
+        if (client.player.networkHandler == null || client.world == null) return "skipped: no world is open";
+        client.player.networkHandler.sendChatCommand("summon minecraft:zombie ~5 ~ ~");
+        return "spawn requested for follower " + safeName(username);
+    }
+
+    private String runSubEvent(MinecraftClient client, String username) {
+        if (!ChatCraftConfig.get().subTntEnabled) return "skipped: sub event disabled";
+        if (client.player.networkHandler == null || client.world == null) return "skipped: no world is open";
+        client.player.networkHandler.sendChatCommand("summon minecraft:tnt ~5 ~ ~");
+        client.player.networkHandler.sendChatCommand(
+                "particle minecraft:firework ~5 ~1 ~ 0.7 0.7 0.7 0.08 80 force");
+        client.player.networkHandler.sendChatCommand(
+                "playsound minecraft:entity.firework_rocket.blast master @s ~5 ~1 ~ 1 1");
+        return "TNT and firework requested for subscriber " + safeName(username);
+    }
+
+    private static String safeName(String username) {
+        if (username == null || username.isBlank()) return "unknown";
+        return username.replaceAll("[^A-Za-z0-9_]", "");
     }
 
     private void hold(KeyBinding key, int duration) {

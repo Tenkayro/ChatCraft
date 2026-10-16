@@ -65,10 +65,20 @@
           <label><input id="settingAutoConnect" type="checkbox"> Auto-connect</label>
           <label><input id="settingAutoReconnect" type="checkbox"> Auto-reconnect</label>
           <label><input id="settingKeepRunning" type="checkbox"> Background mode</label>
+          <label><input id="settingFollowMob" type="checkbox"> Follow spawns zombie</label>
+          <label><input id="settingSubTnt" type="checkbox"> Sub spawns TNT</label>
         </div>
         <p class="muted small">Background mode key: F8 by default. Change it in Minecraft Controls.</p>
         <div class="settings-actions"><button type="submit">Save</button><span id="settingsMessage" class="message" role="status"></span></div>
       </form>
+    </section>
+    <section class="panel event-panel">
+      <div class="panel-heading"><div><h2>Twitch event tests</h2><p class="muted small">The tests use the real action queue. Open a world first; cheats or operator permission are required.</p></div></div>
+      <div class="event-grid">
+        <article><strong>Follow</strong><p class="muted small">Spawns a zombie five blocks beside you.</p><button class="secondary event-test" data-event="follow">Test follow</button></article>
+        <article><strong>Subscription</strong><p class="muted small">Spawns lit TNT five blocks beside you with an immediate firework effect.</p><button class="secondary event-test" data-event="sub">Test subscription</button></article>
+      </div>
+      <p id="eventMessage" class="message" role="status"></p>
     </section>
     <section class="panel world-panel">
       <div class="panel-heading"><div><h2>World rules</h2><p class="muted small">Requires cheats or server operator permission.</p></div></div>
@@ -87,7 +97,7 @@
     <section class="panel activity-panel">
       <div class="panel-heading activity-heading">
         <h2>Activity</h2>
-        <div class="filters" aria-label="Activity filter"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="chat">Chat</button><button class="filter" data-filter="command">Commands</button><button class="filter" data-filter="action">Actions</button><button class="filter" data-filter="system">System</button></div>
+        <div class="filters" aria-label="Activity filter"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="chat">Chat</button><button class="filter" data-filter="command">Commands</button><button class="filter" data-filter="event">Events</button><button class="filter" data-filter="action">Actions</button><button class="filter" data-filter="system">System</button></div>
       </div>
       <div class="table-wrap"><table><thead><tr><th>Time</th><th>Type</th><th>User / message</th><th>Action / result</th></tr></thead><tbody id="activityBody"><tr><td colspan="4" class="empty">Waiting for activity...</td></tr></tbody></table></div>
     </section>

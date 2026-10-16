@@ -11,6 +11,7 @@ import de.tenkayro.chatcraft.dashboard.ChatCraftDashboardServer;
 import de.tenkayro.chatcraft.input.InputController;
 import de.tenkayro.chatcraft.input.BackgroundModeController;
 import de.tenkayro.chatcraft.twitch.TwitchConnection;
+import de.tenkayro.chatcraft.twitch.TwitchEventSub;
 import de.tenkayro.chatcraft.twitch.TwitchChatFeed;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -29,6 +30,7 @@ public final class ChatCraftClient implements ClientModInitializer {
     private static ActionQueue queue;
     private static CommandService commands;
     private static TwitchConnection twitch;
+    private static TwitchEventSub eventSub;
     private static TwitchChatFeed chatFeed;
     private static InputController input;
     private static BackgroundModeController backgroundMode;
@@ -42,7 +44,8 @@ public final class ChatCraftClient implements ClientModInitializer {
         queue = new ActionQueue();
         commands = new CommandService(new CommandParser(), queue, activity);
         chatFeed = new TwitchChatFeed();
-        twitch = new TwitchConnection(commands, queue, activity, chatFeed);
+        eventSub = new TwitchEventSub(queue, activity);
+        twitch = new TwitchConnection(commands, queue, activity, chatFeed, eventSub);
         input = new InputController(queue, activity);
         backgroundMode = new BackgroundModeController(input);
         dashboard = new ChatCraftDashboardServer(activity);
@@ -68,6 +71,7 @@ public final class ChatCraftClient implements ClientModInitializer {
     public static ActionQueue queue() { return queue; }
     public static CommandService commands() { return commands; }
     public static TwitchConnection twitch() { return twitch; }
+    public static TwitchEventSub eventSub() { return eventSub; }
     public static TwitchChatFeed chatFeed() { return chatFeed; }
     public static InputController input() { return input; }
     public static ActivityLog activity() { return activity; }
