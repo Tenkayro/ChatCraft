@@ -3,6 +3,7 @@ package de.tenkayro.chatcraft.twitch;
 import de.tenkayro.chatcraft.ChatCraftClient;
 import de.tenkayro.chatcraft.action.ActionQueue;
 import de.tenkayro.chatcraft.action.ChatAction;
+import de.tenkayro.chatcraft.command.CommandParser;
 import de.tenkayro.chatcraft.command.CommandService;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.dashboard.ActivityLog;
@@ -144,7 +145,7 @@ public final class TwitchConnection {
             int colon = line.indexOf(':');
             if (colon >= 0 && bang > colon) user = line.substring(colon + 1, bang);
         }
-        String message = line.substring(messageStart + 2);
+        String message = CommandParser.sanitizeMessage(line.substring(messageStart + 2));
         activity.add("chat", user, message, "", "received");
         chatFeed.accept(user, message, parseColor(userColor), tags.getOrDefault("badges", ""),
                 tags.getOrDefault("room-id", ""));

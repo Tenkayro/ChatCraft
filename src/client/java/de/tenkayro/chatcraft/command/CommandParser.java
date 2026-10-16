@@ -12,10 +12,11 @@ import java.util.regex.Pattern;
 public final class CommandParser {
     private static final Pattern SLOT = Pattern.compile("^(R|S)?([A-Z]+[1-9][0-9]*)$");
     private static final Pattern TIMED = Pattern.compile("^([A-Z]+)\\.([0-9]+(?:[.,][0-9]+)?)$");
+    private static final Pattern INVISIBLE_DUPLICATE_MARKERS = Pattern.compile("[\\u034F\\u200B\\u2060\\uFEFF]");
 
     public List<ChatAction> parse(String raw) {
         if (raw == null) return List.of();
-        String value = raw.trim();
+        String value = sanitizeMessage(raw).trim();
         String prefix = ChatCraftConfig.get().commandPrefix;
         if (!prefix.isEmpty()) {
             if (!value.startsWith(prefix)) return List.of();
@@ -29,6 +30,11 @@ public final class CommandParser {
             sequence.add(action);
         }
         return List.copyOf(sequence);
+    }
+
+    public static String sanitizeMessage(String message) {
+        if (message == null || message.isEmpty()) return message;
+        return INVISIBLE_DUPLICATE_MARKERS.matcher(message).replaceAll("");
     }
 
     private ChatAction parseSingle(String raw) {
