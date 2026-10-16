@@ -70,10 +70,41 @@ java {
 jar {
 	def projectName = project.name
 	inputs.property "projectName", projectName
+	archiveFileName = "chatcraft-dev.jar"
 
 	from("LICENSE") {
 		rename { "${it}_$projectName"}
 	}
+}
+
+tasks.named("remapJar").configure {
+	archiveFileName = "chatcraft.jar"
+}
+
+tasks.named("sourcesJar").configure {
+	archiveFileName = "chatcraft-sources.jar"
+}
+
+tasks.named("remapSourcesJar").configure {
+	archiveFileName = "chatcraft-sources.jar"
+}
+
+def prismChatCraftMods = file("C:/Users/turte/AppData/Roaming/PrismLauncher/instances/ChatCraft/minecraft/mods")
+
+def removeOldPrismChatCraft = tasks.register("removeOldPrismChatCraft", Delete) {
+	delete fileTree(prismChatCraftMods) {
+		include "chatcraft*.jar"
+		include "chatcraft*.jar.disabled"
+	}
+}
+
+tasks.register("buildToPrismLauncher", Copy) {
+	group = "build"
+	description = "Builds ChatCraft and installs it as chatcraft.jar in the ChatCraft Prism Launcher instance."
+	dependsOn removeOldPrismChatCraft
+	from tasks.named("remapJar").flatMap { it.archiveFile }
+	into prismChatCraftMods
+	rename { "chatcraft.jar" }
 }
 
 // configure the maven publication
