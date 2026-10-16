@@ -6,9 +6,14 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.item.ItemStack;
+import net.minecraft.screen.slot.Slot;
 
 public final class SlotOverlayRenderer {
+    private static final long MOVE_DURATION_NANOS = 180_000_000L;
+    private static final long CLICK_DURATION_NANOS = 350_000_000L;
+    private static final long VISIBLE_DURATION_NANOS = 2_500_000_000L;
     private static final GuiSlotMapper MAPPER = new GuiSlotMapper();
+    private static CursorState cursor;
 
     private SlotOverlayRenderer() { }
 
@@ -25,19 +30,82 @@ public final class SlotOverlayRenderer {
                 context.fill(x, y, x + width + 2, y + 9, 0xE0000000);
                 context.drawTextWithShadow(client.textRenderer, item.label(), x + 1, y, 0x55FF55);
             }
-            renderCursorStack(screen, context, client);
+            renderVirtualCursor(screen, context, client, originX, originY);
         } finally {
             context.getMatrices().pop();
         }
     }
 
-    private static void renderCursorStack(HandledScreen<?> screen, DrawContext context, MinecraftClient client) {
-        ItemStack cursorStack = screen.getScreenHandler().getCursorStack();
-        if (cursorStack.isEmpty()) return;
-        int x = 6;
-        int y = client.getWindow().getScaledHeight() - 28;
-        context.fill(x, y, x + 72, y + 22, 0xE0000000);
-        context.drawTextWithShadow(client.textRenderer, "HELD", x + 5, y + 7, 0x55FF55);
-        context.drawItemInSlot(client.textRenderer, cursorStack, x + 50, y + 3);
+    public static void moveCursorTo(HandledScreen<?> screen, Slot slot) {
+        long now = System.nanoTime();
+        float targetX = slot.x + 8.0F;
+        float targetY = slot.y + 8.0F;
+        float startX = targetX;
+        float startY = targetY;
+        if (cursor != null && cursor.screen == screen) {
+            float progress = progress(now, cursor.startedAt);
+            startX = lerp(cursor.startX, cursor.targetX, progress);
+            startY = lerp(cursor.startY, cursor.targetY, progress);
+        }
+        cursor = new CursorState(screen, slot.id, startX, startY, targetX, targetY, now);
     }
+
+    private static void renderVirtualCursor(HandledScreen<?> screen, DrawContext context, MinecraftClient client,
+                                            int originX, int originY) {
+        CursorState state = cursor;
+        long now = System.nanoTime();
+        if (state == null || state.screen != screen || now - state.startedAt > VISIBLE_DURATION_NANOS) return;
+
+        float progress = progress(now, state.startedAt);
+        int cursorX = originX + Math.round(lerp(state.startX, state.targetX, progress));
+        int cursorY = originY + Math.round(lerp(state.startY, state.targetY, progress));
+
+        Slot target = screen.getScreenHandler().slots.stream()
+                .filter(slot -> slot.id == state.slotId)
+                .findFirst()
+                .orElse(null);
+        if (target != null) {
+            int left = originX + target.x - 1;
+            int top = originY + target.y - 1;
+            int color = now - state.startedAt < CLICK_DURATION_NANOS ? 0xFFFFFF55 : 0xFF55FF55;
+            drawBorder(context, left, top, 18, 18, color);
+        }
+
+        ItemStack cursorStack = screen.getScreenHandler().getCursorStack();
+        if (!cursorStack.isEmpty()) {
+            context.fill(cursorX + 6, cursorY + 6, cursorX + 24, cursorY + 24, 0xB0000000);
+            context.drawItemInSlot(client.textRenderer, cursorStack, cursorX + 7, cursorY + 7);
+        }
+        drawPointer(context, cursorX, cursorY);
+    }
+
+    private static void drawPointer(DrawContext context, int x, int y) {
+        for (int row = 0; row < 11; row++) {
+            int width = row / 2 + 2;
+            context.fill(x, y + row, x + width, y + row + 1, 0xFF111111);
+            if (row > 1 && width > 2) {
+                context.fill(x + 1, y + row, x + width - 1, y + row + 1, 0xFFFFFFFF);
+            }
+        }
+        context.fill(x + 3, y + 8, x + 6, y + 14, 0xFF111111);
+        context.fill(x + 4, y + 8, x + 5, y + 13, 0xFFFFFFFF);
+    }
+
+    private static void drawBorder(DrawContext context, int x, int y, int width, int height, int color) {
+        context.fill(x, y, x + width, y + 1, color);
+        context.fill(x, y + height - 1, x + width, y + height, color);
+        context.fill(x, y, x + 1, y + height, color);
+        context.fill(x + width - 1, y, x + width, y + height, color);
+    }
+
+    private static float progress(long now, long startedAt) {
+        return Math.min(1.0F, (float) (now - startedAt) / MOVE_DURATION_NANOS);
+    }
+
+    private static float lerp(float start, float end, float progress) {
+        return start + (end - start) * progress;
+    }
+
+    private record CursorState(HandledScreen<?> screen, int slotId, float startX, float startY,
+                               float targetX, float targetY, long startedAt) { }
 }

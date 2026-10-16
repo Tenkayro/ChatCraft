@@ -8,6 +8,7 @@ import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.dashboard.ActivityLog;
 import de.tenkayro.chatcraft.gui.GuiSlotMapper;
 import de.tenkayro.chatcraft.mixin.MinecraftClientInvoker;
+import de.tenkayro.chatcraft.overlay.SlotOverlayRenderer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.DeathScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -127,6 +128,7 @@ public final class InputController {
         }
         Slot slot = slots.find(screen, label);
         if (slot != null) {
+            SlotOverlayRenderer.moveCursorTo(screen, slot);
             client.interactionManager.clickSlot(screen.getScreenHandler().syncId, slot.id, button, actionType, client.player);
             return "clicked slot " + label;
         }
