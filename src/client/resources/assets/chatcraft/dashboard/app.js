@@ -4,6 +4,7 @@ let currentToken = "";
 let currentState = "";
 let activeFilter = "all";
 let lastEvents = [];
+let settingsLoaded = false;
 
 async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
@@ -31,11 +32,35 @@ function renderStatus(data) {
   $("queueText").textContent = data.queueSize;
   $("usernameText").textContent = data.username || "Not configured";
   $("controlsText").textContent = data.controlsEnabled ? "Enabled" : "Disabled";
+  $("tokenStatus").textContent = data.tokenConfigured ? "Configured" : "Not configured";
   $("connectionDetail").textContent = data.twitchDetail;
   $("redirectUrl").textContent = data.redirectUrl;
   if (!$("clientId").value && data.clientId) $("clientId").value = data.clientId;
+  if (!settingsLoaded && data.settings) {
+    fillSettings(data.settings);
+    settingsLoaded = true;
+  }
   lastEvents = data.events || [];
   renderEvents();
+}
+
+function fillSettings(settings) {
+  $("settingUsername").value = settings.username || "";
+  $("settingPrefix").value = settings.commandPrefix || "";
+  $("settingMovement").value = settings.movementDurationTicks;
+  $("settingCamera").value = settings.cameraStepDegrees;
+  $("settingQueue").value = settings.queueSize;
+  $("settingCooldown").value = settings.cooldownMillis;
+  $("settingWhitelist").value = (settings.whitelist || []).join("\n");
+  $("settingBlacklist").value = (settings.blacklist || []).join("\n");
+  $("settingControls").checked = settings.controlsEnabled;
+  $("settingOverlay").checked = settings.overlayEnabled;
+  $("settingAutoConnect").checked = settings.autoConnect;
+  $("settingAutoReconnect").checked = settings.autoReconnect;
+}
+
+function nameList(value) {
+  return [...new Set(value.split(/[\n,]+/).map((item) => item.trim().toLowerCase()).filter(Boolean))];
 }
 
 function renderEvents() {
@@ -138,11 +163,58 @@ $("saveToken").addEventListener("click", async () => {
     currentToken = "";
     currentState = "";
     $("tokenValue").textContent = "Saved securely in ChatCraft configuration";
+    $("settingUsername").value = data.username;
     sessionStorage.removeItem("chatcraft.oauth.state");
     setMessage(`Token validated and saved for ${data.username}.`, "success");
     await refresh();
   } catch (error) {
     setMessage(error.message, "error");
+    button.disabled = false;
+  }
+});
+
+$("clearToken").addEventListener("click", async () => {
+  if (!confirm("Remove the saved Twitch access token and disconnect ChatCraft?")) return;
+  try {
+    await api("/api/token/clear", { method: "POST", body: "{}" });
+    $("tokenResult").hidden = true;
+    currentToken = "";
+    setMessage("Saved Twitch token removed.", "success");
+    await refresh();
+  } catch (error) { setMessage(error.message, "error"); }
+});
+
+$("settingsForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = event.submitter;
+  button.disabled = true;
+  const message = $("settingsMessage");
+  try {
+    const data = await api("/api/settings", {
+      method: "POST",
+      body: JSON.stringify({
+        username: $("settingUsername").value.trim(),
+        commandPrefix: $("settingPrefix").value,
+        movementDurationTicks: Number($("settingMovement").value),
+        cameraStepDegrees: Number($("settingCamera").value),
+        queueSize: Number($("settingQueue").value),
+        cooldownMillis: Number($("settingCooldown").value),
+        whitelist: nameList($("settingWhitelist").value),
+        blacklist: nameList($("settingBlacklist").value),
+        controlsEnabled: $("settingControls").checked,
+        overlayEnabled: $("settingOverlay").checked,
+        autoConnect: $("settingAutoConnect").checked,
+        autoReconnect: $("settingAutoReconnect").checked
+      })
+    });
+    fillSettings(data.settings);
+    message.textContent = "Saved";
+    message.className = "message success";
+    await refresh();
+  } catch (error) {
+    message.textContent = error.message;
+    message.className = "message error";
+  } finally {
     button.disabled = false;
   }
 });

@@ -65,10 +65,11 @@ public final class ChatCraftClient implements ClientModInitializer {
     public static Text dashboardMessage() {
         if (!dashboard.running()) return Text.literal("ChatCraft dashboard: " + dashboard.detail())
             .formatted(Formatting.RED);
-        MutableText link = Text.literal(ChatCraftDashboardServer.BASE_URL).styled(style -> style
+        String dashboardUrl = dashboard.baseUrl();
+        MutableText link = Text.literal(dashboardUrl).styled(style -> style
             .withColor(Formatting.AQUA)
             .withUnderline(true)
-            .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, ChatCraftDashboardServer.BASE_URL)));
+            .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, dashboardUrl)));
         return Text.literal("ChatCraft dashboard: ").append(link);
     }
 }

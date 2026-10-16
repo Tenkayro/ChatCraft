@@ -5,23 +5,12 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Style;
 import net.minecraft.text.Text;
+import net.minecraft.util.Util;
 
 public final class ChatCraftConfigScreen extends Screen {
     private final Screen parent;
-    private TextFieldWidget username;
-    private TextFieldWidget token;
-    private TextFieldWidget prefix;
-    private TextFieldWidget movement;
-    private TextFieldWidget camera;
-    private TextFieldWidget queue;
-    private TextFieldWidget cooldown;
-    private boolean controls;
-    private boolean overlay;
-    private boolean autoConnect;
-    private boolean autoReconnect;
+    private TextFieldWidget port;
 
     public ChatCraftConfigScreen(Screen parent) {
         super(Text.literal("ChatCraft Settings"));
@@ -30,108 +19,55 @@ public final class ChatCraftConfigScreen extends Screen {
 
     @Override
     protected void init() {
-        ChatCraftConfig config = ChatCraftConfig.get();
-        controls = config.controlsEnabled;
-        overlay = config.overlayEnabled;
-        autoConnect = config.autoConnect;
-        autoReconnect = config.autoReconnect;
-        int left = width / 2 - 155;
-        int right = width / 2 + 5;
-        username = field(left, 42, "Twitch username", config.username, 128);
-        token = field(right, 42, "OAuth/access token", config.oauthToken, 512);
-        token.setRenderTextProvider((value, offset) -> OrderedText.styledForwardsVisitedString("•".repeat(value.length()), Style.EMPTY));
-        prefix = field(left, 74, "Command prefix (optional)", config.commandPrefix, 16);
-        movement = field(right, 74, "Movement ticks", Integer.toString(config.movementDurationTicks), 4);
-        camera = field(left, 106, "Camera step degrees", Float.toString(config.cameraStepDegrees), 6);
-        queue = field(right, 106, "Queue size", Integer.toString(config.queueSize), 5);
-        cooldown = field(left, 138, "Cooldown milliseconds", Long.toString(config.cooldownMillis), 6);
+        int center = width / 2;
+        port = new TextFieldWidget(textRenderer, center - 100, 64, 200, 20, Text.literal("Dashboard port"));
+        port.setText(Integer.toString(ChatCraftConfig.get().dashboardPort));
+        port.setMaxLength(5);
+        port.setPlaceholder(Text.literal("38473"));
+        addDrawableChild(port);
 
-        addDrawableChild(toggle(left, 170, 150, () -> "Controls: " + onOff(controls), button -> {
-            controls = !controls;
-            button.setMessage(Text.literal("Controls: " + onOff(controls)));
-        }));
-        addDrawableChild(toggle(right, 170, 150, () -> "Slot overlay: " + onOff(overlay), button -> {
-            overlay = !overlay;
-            button.setMessage(Text.literal("Slot overlay: " + onOff(overlay)));
-        }));
-        addDrawableChild(toggle(left, 194, 150, () -> "Auto-connect: " + onOff(autoConnect), button -> {
-            autoConnect = !autoConnect;
-            button.setMessage(Text.literal("Auto-connect: " + onOff(autoConnect)));
-        }));
-        addDrawableChild(toggle(right, 194, 150, () -> "Auto-reconnect: " + onOff(autoReconnect), button -> {
-            autoReconnect = !autoReconnect;
-            button.setMessage(Text.literal("Auto-reconnect: " + onOff(autoReconnect)));
-        }));
-        addDrawableChild(ButtonWidget.builder(Text.literal("Save & Done"), button -> saveAndClose())
-            .dimensions(left, height - 24, 98, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Connect"), button -> {
+        addDrawableChild(ButtonWidget.builder(Text.literal("Open Web Panel"), button -> openDashboard())
+            .dimensions(center - 100, 98, 200, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Save & Done"), button -> {
             save();
-            ChatCraftClient.twitch().connect();
-            button.setMessage(Text.literal("Requested"));
-        }).dimensions(left + 106, height - 24, 98, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Disconnect"), button -> ChatCraftClient.twitch().disconnect())
-            .dimensions(right + 54, height - 24, 96, 20).build());
+            close();
+        }).dimensions(center - 100, height - 48, 98, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), button -> close())
+            .dimensions(center + 2, height - 48, 98, 20).build());
     }
 
-    private TextFieldWidget field(int x, int y, String label, String value, int maxLength) {
-        TextFieldWidget widget = new TextFieldWidget(textRenderer, x, y, 150, 20, Text.literal(label));
-        widget.setText(value);
-        widget.setMaxLength(maxLength);
-        widget.setPlaceholder(Text.literal(label));
-        addDrawableChild(widget);
-        return widget;
-    }
-
-    private ButtonWidget toggle(int x, int y, int width, java.util.function.Supplier<String> label, ButtonWidget.PressAction action) {
-        return ButtonWidget.builder(Text.literal(label.get()), action).dimensions(x, y, width, 20).build();
-    }
-
-    private static String onOff(boolean value) { return value ? "ON" : "OFF"; }
-
-    private void saveAndClose() {
+    private void openDashboard() {
         save();
-        close();
+        if (ChatCraftClient.dashboard().running()) {
+            Util.getOperatingSystem().open(ChatCraftClient.dashboard().baseUrl());
+        }
     }
 
     private void save() {
         ChatCraftConfig config = ChatCraftConfig.get();
-        config.username = username.getText();
-        config.oauthToken = token.getText();
-        config.commandPrefix = prefix.getText();
-        config.controlsEnabled = controls;
-        config.overlayEnabled = overlay;
-        config.autoConnect = autoConnect;
-        config.autoReconnect = autoReconnect;
-        config.movementDurationTicks = parseInt(movement.getText(), config.movementDurationTicks);
-        config.cameraStepDegrees = parseFloat(camera.getText(), config.cameraStepDegrees);
-        config.queueSize = parseInt(queue.getText(), config.queueSize);
-        config.cooldownMillis = parseLong(cooldown.getText(), config.cooldownMillis);
+        int previousPort = config.dashboardPort;
+        config.dashboardPort = parsePort(port.getText(), previousPort);
         config.save();
+        if (config.dashboardPort != previousPort) ChatCraftClient.dashboard().restart();
     }
 
-    private static int parseInt(String value, int fallback) {
-        try { return Integer.parseInt(value.trim()); } catch (NumberFormatException ignored) { return fallback; }
-    }
-    private static long parseLong(String value, long fallback) {
-        try { return Long.parseLong(value.trim()); } catch (NumberFormatException ignored) { return fallback; }
-    }
-    private static float parseFloat(String value, float fallback) {
-        try { return Float.parseFloat(value.trim()); } catch (NumberFormatException ignored) { return fallback; }
+    private static int parsePort(String value, int fallback) {
+        try {
+            return Math.max(1024, Math.min(65535, Integer.parseInt(value.trim())));
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderBackground(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, 0xFFFFFF);
-        int left = width / 2 - 155;
-        int right = width / 2 + 5;
-        context.drawTextWithShadow(textRenderer, "Twitch username and channel", left, 31, 0xA0A0A0);
-        context.drawTextWithShadow(textRenderer, "OAuth/access token (hidden)", right, 31, 0xA0A0A0);
-        context.drawTextWithShadow(textRenderer, "Command prefix (optional)", left, 63, 0xA0A0A0);
-        context.drawTextWithShadow(textRenderer, "Movement duration (ticks)", right, 63, 0xA0A0A0);
-        context.drawTextWithShadow(textRenderer, "Camera step (degrees)", left, 95, 0xA0A0A0);
-        context.drawTextWithShadow(textRenderer, "Queue size", right, 95, 0xA0A0A0);
-        context.drawTextWithShadow(textRenderer, "Cooldown (milliseconds)", left, 127, 0xA0A0A0);
+        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 20, 0xFFFFFF);
+        context.drawCenteredTextWithShadow(textRenderer,
+            "All ChatCraft settings are managed in the local web panel.", width / 2, 38, 0xA0A0A0);
+        context.drawTextWithShadow(textRenderer, "Dashboard port", width / 2 - 100, 53, 0xA0A0A0);
+        context.drawCenteredTextWithShadow(textRenderer,
+            "Changing the port also changes the Twitch OAuth redirect URL.", width / 2, 126, 0x808080);
         super.render(context, mouseX, mouseY, delta);
     }
 

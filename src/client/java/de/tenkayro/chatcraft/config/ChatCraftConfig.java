@@ -25,6 +25,7 @@ public final class ChatCraftConfig {
     public String username = "";
     public String twitchClientId = "";
     public String oauthToken = "";
+    public int dashboardPort = 38473;
     public String commandPrefix = "";
     public boolean controlsEnabled = true;
     public boolean overlayEnabled = true;
@@ -97,6 +98,7 @@ public final class ChatCraftConfig {
         if (twitchClientId == null) twitchClientId = "";
         twitchClientId = twitchClientId.trim();
         if (oauthToken == null) oauthToken = "";
+        dashboardPort = Math.max(1024, Math.min(65535, dashboardPort));
         if (commandPrefix == null) commandPrefix = "";
         if (whitelist == null) whitelist = new ArrayList<>();
         if (blacklist == null) blacklist = new ArrayList<>();

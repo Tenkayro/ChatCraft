@@ -40,6 +40,11 @@
           </div>
         </form>
         <p id="oauthMessage" class="message" role="status"></p>
+        <div class="token-status-row">
+          <span>Saved token</span>
+          <strong id="tokenStatus">Checking…</strong>
+          <button id="clearToken" class="secondary danger">Clear token</button>
+        </div>
         <div id="tokenResult" class="token-result" hidden>
           <label>Access token</label>
           <code id="tokenValue"></code>
@@ -62,6 +67,50 @@
         </div>
         <p class="muted small">The dashboard is available only on this computer. Minecraft actions still run on the client thread.</p>
       </article>
+    </section>
+
+    <section class="panel settings-panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">CONFIGURATION</p><h2>ChatCraft settings</h2></div>
+      </div>
+      <form id="settingsForm">
+        <div class="form-grid">
+          <label>Twitch username
+            <input id="settingUsername" autocomplete="off" placeholder="yourchannel">
+          </label>
+          <label>Command prefix
+            <input id="settingPrefix" autocomplete="off" maxlength="16" placeholder="Optional, for example !">
+          </label>
+          <label>Movement duration (ticks)
+            <input id="settingMovement" type="number" min="1" max="200">
+          </label>
+          <label>Camera step (degrees)
+            <input id="settingCamera" type="number" min="1" max="180" step="0.5">
+          </label>
+          <label>Queue size
+            <input id="settingQueue" type="number" min="8" max="4096">
+          </label>
+          <label>Cooldown (milliseconds)
+            <input id="settingCooldown" type="number" min="0" max="60000">
+          </label>
+          <label>Whitelist
+            <textarea id="settingWhitelist" rows="4" placeholder="One Twitch username per line"></textarea>
+          </label>
+          <label>Blacklist
+            <textarea id="settingBlacklist" rows="4" placeholder="One Twitch username per line"></textarea>
+          </label>
+        </div>
+        <div class="toggles">
+          <label><input id="settingControls" type="checkbox"> Enable Twitch controls</label>
+          <label><input id="settingOverlay" type="checkbox"> Show slot overlay</label>
+          <label><input id="settingAutoConnect" type="checkbox"> Auto-connect</label>
+          <label><input id="settingAutoReconnect" type="checkbox"> Auto-reconnect</label>
+        </div>
+        <div class="settings-actions">
+          <button type="submit">Save settings</button>
+          <span id="settingsMessage" class="message" role="status"></span>
+        </div>
+      </form>
     </section>
 
     <section class="panel activity-panel">

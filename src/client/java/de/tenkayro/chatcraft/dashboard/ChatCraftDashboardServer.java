@@ -34,9 +34,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class ChatCraftDashboardServer {
-    public static final int PORT = 38473;
-    public static final String BASE_URL = "https://localhost:" + PORT;
-    public static final String REDIRECT_URL = BASE_URL + "/oauth/callback";
+    public static final int DEFAULT_PORT = 38473;
     private static final Gson GSON = new Gson();
     private static final int MAX_REQUEST_BYTES = 16_384;
     private static final long OAUTH_LIFETIME_MILLIS = Duration.ofMinutes(10).toMillis();
@@ -46,6 +44,7 @@ public final class ChatCraftDashboardServer {
     private final HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     private volatile HttpsServer server;
     private volatile ExecutorService executor;
+    private volatile int activePort;
     private volatile String oauthState = "";
     private volatile long oauthExpiresAt;
     private volatile String detail = "Not started";
@@ -56,10 +55,12 @@ public final class ChatCraftDashboardServer {
 
     public synchronized void start() {
         if (server != null) return;
+        int port = ChatCraftConfig.get().dashboardPort;
+        activePort = port;
         try {
             SSLContext sslContext = LocalTlsCertificate.createContext();
             HttpsServer active = HttpsServer.create(
-                new InetSocketAddress(InetAddress.getLoopbackAddress(), PORT), 0);
+                new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
             active.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
                 @Override
                 public void configure(HttpsParameters parameters) {
@@ -78,13 +79,13 @@ public final class ChatCraftDashboardServer {
             active.start();
             executor = threads;
             server = active;
-            detail = "Running on " + BASE_URL;
+            detail = "Running on " + baseUrl();
             activity.add("system", "", "", "Dashboard", detail);
-            ChatCraftClient.LOGGER.info("ChatCraft dashboard started at {}", BASE_URL);
+            ChatCraftClient.LOGGER.info("ChatCraft dashboard started at {}", baseUrl());
         } catch (Exception exception) {
             detail = "Could not start: " + exception.getClass().getSimpleName();
             activity.add("system", "", "", "Dashboard", detail);
-            ChatCraftClient.LOGGER.error("Could not start ChatCraft dashboard on port {}", PORT, exception);
+            ChatCraftClient.LOGGER.error("Could not start ChatCraft dashboard on port {}", port, exception);
         }
     }
 
@@ -100,6 +101,15 @@ public final class ChatCraftDashboardServer {
 
     public boolean running() { return server != null; }
     public String detail() { return detail; }
+    public String baseUrl() { return "https://localhost:" + activePort; }
+    public String redirectUrl() { return baseUrl() + "/oauth/callback"; }
+
+    public synchronized void restart() {
+        stop();
+        oauthState = "";
+        oauthExpiresAt = 0;
+        start();
+    }
 
     private void handle(HttpExchange exchange) throws IOException {
         try {
@@ -117,6 +127,8 @@ public final class ChatCraftDashboardServer {
                 case "/api/status" -> status(exchange);
                 case "/api/oauth/start" -> startOauth(exchange);
                 case "/api/oauth/token" -> saveOauthToken(exchange);
+                case "/api/settings" -> saveSettings(exchange);
+                case "/api/token/clear" -> clearToken(exchange);
                 case "/api/control" -> control(exchange);
                 default -> sendText(exchange, 404, "Not found", "text/plain; charset=utf-8");
             }
@@ -150,9 +162,46 @@ public final class ChatCraftDashboardServer {
         payload.put("username", config.username);
         payload.put("controlsEnabled", config.controlsEnabled);
         payload.put("clientId", config.twitchClientId);
-        payload.put("redirectUrl", REDIRECT_URL);
+        payload.put("tokenConfigured", !config.oauthToken.isBlank());
+        payload.put("redirectUrl", redirectUrl());
+        payload.put("settings", settingsPayload(config));
         payload.put("events", activity.snapshot());
         sendJson(exchange, 200, payload);
+    }
+
+    private void saveSettings(HttpExchange exchange) throws IOException {
+        if (!authorizedPost(exchange)) return;
+        JsonObject request = readJson(exchange);
+        ChatCraftConfig config = ChatCraftConfig.get();
+        synchronized (config) {
+            config.username = string(request, "username");
+            config.commandPrefix = string(request, "commandPrefix");
+            config.controlsEnabled = bool(request, "controlsEnabled", config.controlsEnabled);
+            config.overlayEnabled = bool(request, "overlayEnabled", config.overlayEnabled);
+            config.autoConnect = bool(request, "autoConnect", config.autoConnect);
+            config.autoReconnect = bool(request, "autoReconnect", config.autoReconnect);
+            config.movementDurationTicks = integer(request, "movementDurationTicks", config.movementDurationTicks);
+            config.cameraStepDegrees = decimal(request, "cameraStepDegrees", config.cameraStepDegrees);
+            config.queueSize = integer(request, "queueSize", config.queueSize);
+            config.cooldownMillis = longNumber(request, "cooldownMillis", config.cooldownMillis);
+            config.whitelist = strings(request, "whitelist");
+            config.blacklist = strings(request, "blacklist");
+            config.save();
+        }
+        activity.add("system", "", "", "Settings", "saved from dashboard");
+        sendJson(exchange, 200, Map.of("ok", true, "settings", settingsPayload(config)));
+    }
+
+    private void clearToken(HttpExchange exchange) throws IOException {
+        if (!authorizedPost(exchange)) return;
+        ChatCraftClient.twitch().disconnect();
+        ChatCraftConfig config = ChatCraftConfig.get();
+        synchronized (config) {
+            config.oauthToken = "";
+            config.save();
+        }
+        activity.add("system", "", "", "OAuth", "access token cleared");
+        sendJson(exchange, 200, Map.of("ok", true));
     }
 
     private void startOauth(HttpExchange exchange) throws IOException {
@@ -172,7 +221,7 @@ public final class ChatCraftDashboardServer {
         }
         String url = "https://id.twitch.tv/oauth2/authorize?response_type=token"
             + "&client_id=" + encode(clientId)
-            + "&redirect_uri=" + encode(REDIRECT_URL)
+            + "&redirect_uri=" + encode(redirectUrl())
             + "&scope=" + encode("chat:read")
             + "&state=" + encode(oauthState);
         sendJson(exchange, 200, Map.of("url", url, "state", oauthState));
@@ -265,6 +314,51 @@ public final class ChatCraftDashboardServer {
 
     private static String string(JsonObject object, String key) {
         return object.has(key) && object.get(key).isJsonPrimitive() ? object.get(key).getAsString() : "";
+    }
+
+    private static boolean bool(JsonObject object, String key, boolean fallback) {
+        return object.has(key) && object.get(key).isJsonPrimitive() ? object.get(key).getAsBoolean() : fallback;
+    }
+
+    private static int integer(JsonObject object, String key, int fallback) {
+        try { return object.get(key).getAsInt(); } catch (Exception ignored) { return fallback; }
+    }
+
+    private static long longNumber(JsonObject object, String key, long fallback) {
+        try { return object.get(key).getAsLong(); } catch (Exception ignored) { return fallback; }
+    }
+
+    private static float decimal(JsonObject object, String key, float fallback) {
+        try { return object.get(key).getAsFloat(); } catch (Exception ignored) { return fallback; }
+    }
+
+    private static java.util.List<String> strings(JsonObject object, String key) {
+        java.util.List<String> values = new java.util.ArrayList<>();
+        if (!object.has(key) || !object.get(key).isJsonArray()) return values;
+        for (var element : object.getAsJsonArray(key)) {
+            if (element.isJsonPrimitive()) {
+                String value = element.getAsString().trim();
+                if (!value.isEmpty()) values.add(value);
+            }
+        }
+        return values;
+    }
+
+    private static Map<String, Object> settingsPayload(ChatCraftConfig config) {
+        Map<String, Object> settings = new LinkedHashMap<>();
+        settings.put("username", config.username);
+        settings.put("commandPrefix", config.commandPrefix);
+        settings.put("controlsEnabled", config.controlsEnabled);
+        settings.put("overlayEnabled", config.overlayEnabled);
+        settings.put("autoConnect", config.autoConnect);
+        settings.put("autoReconnect", config.autoReconnect);
+        settings.put("movementDurationTicks", config.movementDurationTicks);
+        settings.put("cameraStepDegrees", config.cameraStepDegrees);
+        settings.put("queueSize", config.queueSize);
+        settings.put("cooldownMillis", config.cooldownMillis);
+        settings.put("whitelist", config.whitelist);
+        settings.put("blacklist", config.blacklist);
+        return settings;
     }
 
     private static boolean method(HttpExchange exchange, String expected) throws IOException {
