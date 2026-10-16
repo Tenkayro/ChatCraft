@@ -12,7 +12,18 @@ function render(data) {
   for (const item of (data.chat || []).slice(-8)) {
     const line = document.createElement("div");
     line.className = "line";
-    if (item.badges?.length) line.append(text(item.badges.join(" "), "badges"));
+    if (item.badges?.length) {
+      const badges = document.createElement("span");
+      badges.className = "badges";
+      for (const url of item.badges) {
+        const image = document.createElement("img");
+        image.className = "badge-image";
+        image.src = url;
+        image.alt = "";
+        badges.append(image);
+      }
+      line.append(badges);
+    }
     const name = text(`${item.user}:`, "name");
     name.style.color = item.color || "#9146ff";
     line.append(name);

@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import de.tenkayro.chatcraft.ChatCraftClient;
+import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ChatScreen;
@@ -35,6 +36,7 @@ public final class TwitchChatFeed {
     private static final long MESSAGE_LIFETIME = 15_000L;
     private final Deque<Message> messages = new ArrayDeque<>();
     private final Map<String, Emote> emotes = new ConcurrentHashMap<>();
+    private final Map<String, Badge> badges = new ConcurrentHashMap<>();
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
     private final ExecutorService loader = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "ChatCraft-7TV");
@@ -44,9 +46,9 @@ public final class TwitchChatFeed {
     private volatile String loadedRoom = "";
 
     public void accept(String user, String message, int color, String badgeTags, String roomId) {
-        if (roomId != null && !roomId.isBlank() && !roomId.equals(loadedRoom)) loadEmotes(roomId);
+        if (roomId != null && roomId.matches("[0-9]+") && !roomId.equals(loadedRoom)) loadAssets(roomId);
         synchronized (messages) {
-            messages.addLast(new Message(System.currentTimeMillis(), user, message, color, badgeCodes(badgeTags)));
+            messages.addLast(new Message(System.currentTimeMillis(), user, message, color, parseBadges(badgeTags)));
             while (messages.size() > 100) messages.removeFirst();
         }
     }
@@ -65,6 +67,12 @@ public final class TwitchChatFeed {
         int maximum = chatOpen ? 12 : 6;
         if (visible.size() > maximum) visible = visible.subList(visible.size() - maximum, visible.size());
         int y = client.getWindow().getScaledHeight() - 44 - visible.size() * 14;
+        int panelWidth = 0;
+        for (Message message : visible) panelWidth = Math.max(panelWidth, measureLine(client, message));
+        if (!visible.isEmpty()) {
+            context.fill(2, y - 3, Math.min(client.getWindow().getScaledWidth() - 2, panelWidth + 9),
+                    y + visible.size() * 14, 0x78000000);
+        }
         for (Message message : visible) {
             renderLine(context, client, message, 4, y);
             y += 14;
@@ -84,7 +92,11 @@ public final class TwitchChatFeed {
                 item.put("user", message.user);
                 item.put("message", message.text);
                 item.put("color", String.format("#%06X", message.color));
-                item.put("badges", message.badges);
+                item.put("badges", message.badges.stream()
+                        .map(ref -> badges.get(ref.key()))
+                        .filter(java.util.Objects::nonNull)
+                        .map(badge -> badge.imageUrl)
+                        .toList());
                 result.add(item);
             }
         }
@@ -98,15 +110,18 @@ public final class TwitchChatFeed {
     }
 
     private void renderLine(DrawContext context, MinecraftClient client, Message message, int x, int y) {
-        int width = Math.min(client.getWindow().getScaledWidth() - 8, measureLine(client, message));
-        context.fill(x - 2, y - 2, x + width + 3, y + 12, 0xA0000000);
-        for (String badge : message.badges) {
-            context.drawTextWithShadow(client.textRenderer, badge, x, y, 0xFFD166);
-            x += client.textRenderer.getWidth(badge) + 2;
+        for (BadgeRef reference : message.badges) {
+            Badge badge = badges.get(reference.key());
+            if (badge == null) continue;
+            ensureBadgeTexture(badge);
+            if (badge.texture != null) {
+                context.drawTexture(badge.texture, x, y - 1, 0, 0, 10, 10, badge.width, badge.height);
+                x += 12;
+            }
         }
         context.drawTextWithShadow(client.textRenderer, message.user, x, y, message.color);
-        x += client.textRenderer.getWidth(message.user) + 2;
-        context.drawTextWithShadow(client.textRenderer, ":", x, y, 0xFFFFFFFF);
+        x += client.textRenderer.getWidth(message.user);
+        context.drawTextWithShadow(client.textRenderer, ": ", x, y, 0xFFFFFFFF);
         x += client.textRenderer.getWidth(": ");
         int limit = client.getWindow().getScaledWidth() - 6;
         for (String word : message.text.split(" ")) {
@@ -128,14 +143,20 @@ public final class TwitchChatFeed {
     }
 
     private int measureLine(MinecraftClient client, Message message) {
-        int width = client.textRenderer.getWidth(message.user + ": " + message.text);
-        for (String badge : message.badges) width += client.textRenderer.getWidth(badge) + 2;
+        int width = client.textRenderer.getWidth(message.user + ": ");
+        for (BadgeRef reference : message.badges) if (badges.containsKey(reference.key())) width += 12;
+        for (String word : message.text.split(" ")) {
+            Emote emote = emotes.get(word);
+            width += emote == null ? client.textRenderer.getWidth(word + " ")
+                    : Math.max(10, Math.min(28, Math.round(12.0F * emote.width / emote.height))) + 3;
+        }
         return width;
     }
 
-    private void loadEmotes(String roomId) {
+    private void loadAssets(String roomId) {
         loadedRoom = roomId;
         emotes.clear();
+        badges.clear();
         loader.execute(() -> {
             try {
                 readEmoteSet("https://7tv.io/v3/emote-sets/global");
@@ -143,6 +164,7 @@ public final class TwitchChatFeed {
             } catch (Exception exception) {
                 ChatCraftClient.LOGGER.debug("Could not load 7TV emotes: {}", exception.toString());
             }
+            loadTwitchBadges(roomId);
         });
     }
 
@@ -177,22 +199,23 @@ public final class TwitchChatFeed {
         for (JsonElement element : files) {
             JsonObject file = element.getAsJsonObject();
             String name = string(file, "name", "");
-            String staticName = string(file, "static_name", name);
             int width = number(file, "width", 32);
             int height = number(file, "height", 32);
             if (name.equals("1x.png")) return new ImageChoice(name, name, width, height);
-            if (name.equals("1x.gif")) gif = new ImageChoice(staticName, name, width, height);
+            if (name.equals("1x.gif")) gif = new ImageChoice(name, name, width, height);
         }
         return gif;
     }
 
     private void ensureTexture(Emote emote) {
-        if (emote.texture != null || emote.loading) return;
+        if (emote.texture != null || emote.loading || System.nanoTime() < emote.retryAfter) return;
         emote.loading = true;
         loader.execute(() -> {
             try {
                 HttpRequest request = HttpRequest.newBuilder(URI.create(emote.imageUrl)).timeout(Duration.ofSeconds(8)).GET().build();
-                byte[] bytes = http.send(request, HttpResponse.BodyHandlers.ofByteArray()).body();
+                HttpResponse<byte[]> response = http.send(request, HttpResponse.BodyHandlers.ofByteArray());
+                if (response.statusCode() != 200) throw new java.io.IOException("CDN returned " + response.statusCode());
+                byte[] bytes = response.body();
                 NativeImage image = emote.imageUrl.endsWith(".png") ? NativeImage.read(bytes) : fromBuffered(ImageIO.read(new ByteArrayInputStream(bytes)));
                 MinecraftClient.getInstance().execute(() -> {
                     emote.width = image.getWidth();
@@ -201,7 +224,64 @@ public final class TwitchChatFeed {
                             "chatcraft_7tv_" + emote.id, new NativeImageBackedTexture(image));
                 });
             } catch (Exception exception) {
+                emote.loading = false;
+                emote.retryAfter = System.nanoTime() + Duration.ofSeconds(30).toNanos();
                 ChatCraftClient.LOGGER.debug("Could not load 7TV emote {}: {}", emote.id, exception.toString());
+            }
+        });
+    }
+
+    private void loadTwitchBadges(String roomId) {
+        ChatCraftConfig config = ChatCraftConfig.get();
+        String token = config.oauthToken == null ? "" : config.oauthToken.trim();
+        if (token.regionMatches(true, 0, "oauth:", 0, 6)) token = token.substring(6);
+        if (token.isBlank() || config.twitchClientId == null || config.twitchClientId.isBlank()) return;
+        try {
+            readBadges(requestTwitchJson("https://api.twitch.tv/helix/chat/badges/global", token,
+                    config.twitchClientId));
+            readBadges(requestTwitchJson("https://api.twitch.tv/helix/chat/badges?broadcaster_id=" + roomId,
+                    token, config.twitchClientId));
+        } catch (Exception exception) {
+            ChatCraftClient.LOGGER.debug("Could not load Twitch badges: {}", exception.toString());
+        }
+    }
+
+    private void readBadges(JsonObject response) {
+        if (!response.has("data") || !response.get("data").isJsonArray()) return;
+        for (JsonElement setElement : response.getAsJsonArray("data")) {
+            JsonObject set = setElement.getAsJsonObject();
+            String setId = string(set, "set_id", "");
+            if (setId.isBlank() || !set.has("versions") || !set.get("versions").isJsonArray()) continue;
+            for (JsonElement versionElement : set.getAsJsonArray("versions")) {
+                JsonObject version = versionElement.getAsJsonObject();
+                String versionId = string(version, "id", "");
+                String imageUrl = string(version, "image_url_1x", "");
+                if (!versionId.isBlank() && imageUrl.startsWith("https://")) {
+                    badges.put(setId + "/" + versionId, new Badge(setId + "_" + versionId, imageUrl));
+                }
+            }
+        }
+    }
+
+    private void ensureBadgeTexture(Badge badge) {
+        if (badge.texture != null || badge.loading || System.nanoTime() < badge.retryAfter) return;
+        badge.loading = true;
+        loader.execute(() -> {
+            try {
+                HttpRequest request = HttpRequest.newBuilder(URI.create(badge.imageUrl)).timeout(Duration.ofSeconds(8)).GET().build();
+                HttpResponse<byte[]> response = http.send(request, HttpResponse.BodyHandlers.ofByteArray());
+                if (response.statusCode() != 200) throw new java.io.IOException("Badge CDN returned " + response.statusCode());
+                NativeImage image = NativeImage.read(response.body());
+                MinecraftClient.getInstance().execute(() -> {
+                    badge.width = image.getWidth();
+                    badge.height = image.getHeight();
+                    badge.texture = MinecraftClient.getInstance().getTextureManager().registerDynamicTexture(
+                            "chatcraft_twitch_badge_" + badge.id.replace('/', '_'), new NativeImageBackedTexture(image));
+                });
+            } catch (Exception exception) {
+                badge.loading = false;
+                badge.retryAfter = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+                ChatCraftClient.LOGGER.debug("Could not load Twitch badge {}: {}", badge.id, exception.toString());
             }
         });
     }
@@ -210,6 +290,16 @@ public final class TwitchChatFeed {
         HttpRequest request = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8)).GET().build();
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) throw new java.io.IOException("7TV returned " + response.statusCode());
+        return JsonParser.parseString(response.body()).getAsJsonObject();
+    }
+
+    private JsonObject requestTwitchJson(String url, String token, String clientId) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
+                .header("Authorization", "Bearer " + token)
+                .header("Client-Id", clientId)
+                .GET().build();
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) throw new java.io.IOException("Twitch returned " + response.statusCode());
         return JsonParser.parseString(response.body()).getAsJsonObject();
     }
 
@@ -226,20 +316,14 @@ public final class TwitchChatFeed {
         return image;
     }
 
-    private static List<String> badgeCodes(String tags) {
+    private static List<BadgeRef> parseBadges(String tags) {
         if (tags == null || tags.isBlank()) return List.of();
-        List<String> result = new ArrayList<>();
+        List<BadgeRef> result = new ArrayList<>();
         for (String badge : tags.split(",")) {
-            String name = badge.split("/", 2)[0];
-            String code = switch (name) {
-                case "broadcaster" -> "[B]";
-                case "moderator" -> "[M]";
-                case "vip" -> "[V]";
-                case "subscriber", "founder" -> "[S]";
-                case "premium", "turbo" -> "[P]";
-                default -> "";
-            };
-            if (!code.isEmpty()) result.add(code);
+            String[] parts = badge.split("/", 2);
+            if (parts.length == 2 && !parts[0].isBlank() && !parts[1].isBlank()) {
+                result.add(new BadgeRef(parts[0], parts[1]));
+            }
         }
         return List.copyOf(result);
     }
@@ -252,7 +336,10 @@ public final class TwitchChatFeed {
         try { return object.get(key).getAsInt(); } catch (Exception ignored) { return fallback; }
     }
 
-    private record Message(long timestamp, String user, String text, int color, List<String> badges) { }
+    private record Message(long timestamp, String user, String text, int color, List<BadgeRef> badges) { }
+    private record BadgeRef(String setId, String version) {
+        private String key() { return setId + "/" + version; }
+    }
     private record ImageChoice(String file, String browserFile, int width, int height) { }
 
     private static final class Emote {
@@ -262,6 +349,7 @@ public final class TwitchChatFeed {
         private volatile int width;
         private volatile int height;
         private volatile boolean loading;
+        private volatile long retryAfter;
         private volatile Identifier texture;
 
         private Emote(String id, String imageUrl, String browserFile, int width, int height) {
@@ -270,6 +358,21 @@ public final class TwitchChatFeed {
             this.browserUrl = imageUrl.substring(0, imageUrl.lastIndexOf('/') + 1) + browserFile;
             this.width = width;
             this.height = height;
+        }
+    }
+
+    private static final class Badge {
+        private final String id;
+        private final String imageUrl;
+        private volatile int width = 18;
+        private volatile int height = 18;
+        private volatile boolean loading;
+        private volatile long retryAfter;
+        private volatile Identifier texture;
+
+        private Badge(String id, String imageUrl) {
+            this.id = id;
+            this.imageUrl = imageUrl;
         }
     }
 }
