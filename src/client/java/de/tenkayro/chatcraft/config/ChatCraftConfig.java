@@ -7,7 +7,6 @@ import com.google.gson.JsonParser;
 import de.tenkayro.chatcraft.ChatCraftClient;
 import net.fabricmc.loader.api.FabricLoader;
 
-import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
