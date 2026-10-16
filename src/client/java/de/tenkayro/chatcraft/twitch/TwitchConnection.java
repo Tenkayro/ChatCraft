@@ -45,14 +45,9 @@ public final class TwitchConnection {
     public synchronized void connect() {
         if (state == State.CONNECTED || state == State.CONNECTING) return;
         ChatCraftConfig config = ChatCraftConfig.get();
-        if (stripChannel(config.channel).isEmpty()) {
+        if (normalizeUsername(config.username).isEmpty()) {
             state = State.ERROR;
-            detail = "Channel is not configured";
-            return;
-        }
-        if (!config.oauthToken.isBlank() && config.username.isBlank()) {
-            state = State.ERROR;
-            detail = "Username is required when using a token";
+            detail = "Twitch username is not configured";
             return;
         }
         manualDisconnect.set(false);
@@ -75,9 +70,9 @@ public final class TwitchConnection {
 
     private void runConnection() {
         ChatCraftConfig config = ChatCraftConfig.get();
-        String channel = stripChannel(config.channel);
-        String nick = config.username.trim().toLowerCase(Locale.ROOT);
-        boolean anonymous = nick.isEmpty() && config.oauthToken.isBlank();
+        String channel = normalizeUsername(config.username);
+        String nick = channel;
+        boolean anonymous = config.oauthToken.isBlank();
         if (anonymous) nick = "justinfan" + (10000 + (int) (Math.random() * 80000));
         try {
             SSLSocket active = (SSLSocket) SSLSocketFactory.getDefault().createSocket("irc.chat.twitch.tv", 6697);
@@ -160,8 +155,8 @@ public final class TwitchConnection {
         writer.flush();
     }
 
-    private static String stripChannel(String channel) {
-        return channel == null ? "" : channel.trim().toLowerCase(Locale.ROOT).replaceFirst("^#", "");
+    private static String normalizeUsername(String username) {
+        return username == null ? "" : username.trim().toLowerCase(Locale.ROOT).replaceFirst("^[@#]", "");
     }
 
     private static String normalizeToken(String token) {

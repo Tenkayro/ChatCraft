@@ -11,7 +11,6 @@ import net.minecraft.text.Text;
 
 public final class ChatCraftConfigScreen extends Screen {
     private final Screen parent;
-    private TextFieldWidget channel;
     private TextFieldWidget username;
     private TextFieldWidget token;
     private TextFieldWidget prefix;
@@ -38,15 +37,14 @@ public final class ChatCraftConfigScreen extends Screen {
         autoReconnect = config.autoReconnect;
         int left = width / 2 - 155;
         int right = width / 2 + 5;
-        channel = field(left, 42, "Twitch channel", config.channel, 128);
-        username = field(right, 42, "Twitch username", config.username, 128);
-        token = field(left, 74, "OAuth/access token", config.oauthToken, 512);
+        username = field(left, 42, "Twitch username", config.username, 128);
+        token = field(right, 42, "OAuth/access token", config.oauthToken, 512);
         token.setRenderTextProvider((value, offset) -> OrderedText.styledForwardsVisitedString("•".repeat(value.length()), Style.EMPTY));
-        prefix = field(right, 74, "Command prefix (optional)", config.commandPrefix, 16);
-        movement = field(left, 106, "Movement ticks", Integer.toString(config.movementDurationTicks), 4);
-        camera = field(right, 106, "Camera step degrees", Float.toString(config.cameraStepDegrees), 6);
-        queue = field(left, 138, "Queue size", Integer.toString(config.queueSize), 5);
-        cooldown = field(right, 138, "Cooldown milliseconds", Long.toString(config.cooldownMillis), 6);
+        prefix = field(left, 74, "Command prefix (optional)", config.commandPrefix, 16);
+        movement = field(right, 74, "Movement ticks", Integer.toString(config.movementDurationTicks), 4);
+        camera = field(left, 106, "Camera step degrees", Float.toString(config.cameraStepDegrees), 6);
+        queue = field(right, 106, "Queue size", Integer.toString(config.queueSize), 5);
+        cooldown = field(left, 138, "Cooldown milliseconds", Long.toString(config.cooldownMillis), 6);
 
         addDrawableChild(toggle(left, 170, 150, () -> "Controls: " + onOff(controls), button -> {
             controls = !controls;
@@ -97,7 +95,6 @@ public final class ChatCraftConfigScreen extends Screen {
 
     private void save() {
         ChatCraftConfig config = ChatCraftConfig.get();
-        config.channel = channel.getText();
         config.username = username.getText();
         config.oauthToken = token.getText();
         config.commandPrefix = prefix.getText();
@@ -128,14 +125,13 @@ public final class ChatCraftConfigScreen extends Screen {
         context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, 0xFFFFFF);
         int left = width / 2 - 155;
         int right = width / 2 + 5;
-        context.drawTextWithShadow(textRenderer, "Twitch channel", left, 31, 0xA0A0A0);
-        context.drawTextWithShadow(textRenderer, "Twitch username (needed with token)", right, 31, 0xA0A0A0);
-        context.drawTextWithShadow(textRenderer, "OAuth/access token (hidden)", left, 63, 0xA0A0A0);
-        context.drawTextWithShadow(textRenderer, "Command prefix (optional)", right, 63, 0xA0A0A0);
-        context.drawTextWithShadow(textRenderer, "Movement duration (ticks)", left, 95, 0xA0A0A0);
-        context.drawTextWithShadow(textRenderer, "Camera step (degrees)", right, 95, 0xA0A0A0);
-        context.drawTextWithShadow(textRenderer, "Queue size", left, 127, 0xA0A0A0);
-        context.drawTextWithShadow(textRenderer, "Cooldown (milliseconds)", right, 127, 0xA0A0A0);
+        context.drawTextWithShadow(textRenderer, "Twitch username and channel", left, 31, 0xA0A0A0);
+        context.drawTextWithShadow(textRenderer, "OAuth/access token (hidden)", right, 31, 0xA0A0A0);
+        context.drawTextWithShadow(textRenderer, "Command prefix (optional)", left, 63, 0xA0A0A0);
+        context.drawTextWithShadow(textRenderer, "Movement duration (ticks)", right, 63, 0xA0A0A0);
+        context.drawTextWithShadow(textRenderer, "Camera step (degrees)", left, 95, 0xA0A0A0);
+        context.drawTextWithShadow(textRenderer, "Queue size", right, 95, 0xA0A0A0);
+        context.drawTextWithShadow(textRenderer, "Cooldown (milliseconds)", left, 127, 0xA0A0A0);
         super.render(context, mouseX, mouseY, delta);
     }
 

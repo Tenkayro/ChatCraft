@@ -2,6 +2,8 @@ package de.tenkayro.chatcraft.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import de.tenkayro.chatcraft.ChatCraftClient;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -20,7 +22,6 @@ public final class ChatCraftConfig {
     private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve("chatcraft.json");
     private static ChatCraftConfig instance;
 
-    public String channel = "";
     public String username = "";
     public String oauthToken = "";
     public String commandPrefix = "";
@@ -49,9 +50,15 @@ public final class ChatCraftConfig {
     private static ChatCraftConfig load() {
         if (Files.isRegularFile(PATH)) {
             try (Reader reader = Files.newBufferedReader(PATH)) {
-                ChatCraftConfig config = GSON.fromJson(reader, ChatCraftConfig.class);
+                JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+                ChatCraftConfig config = GSON.fromJson(json, ChatCraftConfig.class);
                 if (config != null) {
+                    if ((config.username == null || config.username.isBlank())
+                        && json.has("channel") && json.get("channel").isJsonPrimitive()) {
+                        config.username = json.get("channel").getAsString();
+                    }
                     config.normalize();
+                    if (json.has("channel")) config.save();
                     return config;
                 }
             } catch (Exception exception) {
@@ -84,8 +91,8 @@ public final class ChatCraftConfig {
     }
 
     private void normalize() {
-        if (channel == null) channel = "";
         if (username == null) username = "";
+        username = username.trim().toLowerCase(Locale.ROOT).replaceFirst("^[@#]", "");
         if (oauthToken == null) oauthToken = "";
         if (commandPrefix == null) commandPrefix = "";
         if (whitelist == null) whitelist = new ArrayList<>();
