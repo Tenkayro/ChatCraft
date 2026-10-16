@@ -15,6 +15,7 @@ import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -92,7 +93,7 @@ public final class InputController {
                 client.setScreen(new InventoryScreen(client.player));
             }
             case DROP -> client.player.dropSelectedItem(false);
-            case HOTBAR -> client.player.getInventory().selectedSlot = Integer.parseInt(action.argument()) - 1;
+            case HOTBAR -> selectHotbar(client, Integer.parseInt(action.argument()) - 1);
             case ATTACK -> ((MinecraftClientInvoker) client).chatcraft$doAttack();
             case USE -> ((MinecraftClientInvoker) client).chatcraft$doItemUse();
             case CAMERA_LEFT -> camera.turn(client, -step, 0);
@@ -113,6 +114,11 @@ public final class InputController {
     private void hold(KeyBinding key, int duration) {
         key.setPressed(true);
         heldUntil.merge(key, tick + duration, Math::max);
+    }
+
+    private static void selectHotbar(MinecraftClient client, int slot) {
+        client.player.getInventory().selectedSlot = slot;
+        client.player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(slot));
     }
 
     private String clickSlot(MinecraftClient client, String label, int button, SlotActionType actionType) {
