@@ -12,7 +12,7 @@ public final class GuiSlotMapper {
     public record LabelledSlot(String label, Slot slot) { }
 
     public List<LabelledSlot> map(HandledScreen<?> screen) {
-        List<Slot> slots = screen.getScreenHandler().slots.stream().filter(Slot::isEnabled).toList();
+        List<Slot> slots = List.copyOf(screen.getScreenHandler().slots);
         List<Integer> columns = slots.stream().map(slot -> slot.x).distinct().sorted().toList();
         List<Integer> rows = slots.stream().map(slot -> slot.y).distinct().sorted().toList();
         List<LabelledSlot> result = new ArrayList<>();

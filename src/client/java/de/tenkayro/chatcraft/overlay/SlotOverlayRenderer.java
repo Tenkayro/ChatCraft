@@ -33,9 +33,13 @@ public final class SlotOverlayRenderer {
 
     private SlotOverlayRenderer() { }
 
-    public static void render(HandledScreen<?> screen, DrawContext context, int originX, int originY) {
+    public static void render(HandledScreen<?> screen, DrawContext context) {
         if (!ChatCraftConfig.get().overlayEnabled) return;
         MinecraftClient client = MinecraftClient.getInstance();
+        de.tenkayro.chatcraft.mixin.HandledScreenAccessor access =
+                (de.tenkayro.chatcraft.mixin.HandledScreenAccessor) screen;
+        int originX = access.chatcraft$getX();
+        int originY = access.chatcraft$getY();
         context.getMatrices().push();
         context.getMatrices().translate(0, 0, 500);
         try {

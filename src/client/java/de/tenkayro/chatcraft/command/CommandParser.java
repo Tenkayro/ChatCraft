@@ -15,6 +15,7 @@ public final class CommandParser {
     private static final Pattern RECIPE = Pattern.compile("^(?:R|RECIPE)([1-9]|1[0-9]|20)$");
     private static final Pattern RECIPE_ALTERNATIVE = Pattern.compile("^V([1-9][0-9]?)$");
     private static final Pattern RECIPE_CATEGORY = Pattern.compile("^T([1-9])$");
+    private static final Pattern UI_BUTTON = Pattern.compile("^U([1-9][0-9]{0,2})$");
     private static final Pattern TIMED = Pattern.compile("^([A-Z]+)\\.([0-9]+(?:[.,][0-9]+)?)$");
     private static final Pattern INVISIBLE_DUPLICATE_MARKERS = Pattern.compile("[\\u034F\\u200B\\u2060\\uFEFF]");
 
@@ -84,6 +85,8 @@ public final class CommandParser {
         if (alternative.matches()) return new ChatAction(ChatAction.Type.RECIPE_ALTERNATIVE, alternative.group(1));
         Matcher category = RECIPE_CATEGORY.matcher(command);
         if (category.matches()) return new ChatAction(ChatAction.Type.RECIPE_CATEGORY, category.group(1));
+        Matcher uiButton = UI_BUTTON.matcher(command);
+        if (uiButton.matches()) return new ChatAction(ChatAction.Type.UI_CLICK, "U" + uiButton.group(1));
         Matcher slot = SLOT.matcher(command);
         if (slot.matches()) {
             ChatAction.Type type = switch (slot.group(1) == null ? "" : slot.group(1)) {
@@ -110,6 +113,7 @@ public final class CommandParser {
             case "BREAK", "MINE" -> new ChatAction(ChatAction.Type.BREAK);
             case "PLACE", "BUILD" -> new ChatAction(ChatAction.Type.PLACE);
             case "RECIPEBOOK", "RECIPES", "BOOK" -> new ChatAction(ChatAction.Type.RECIPE_BOOK);
+            case "RF", "RECIPEFILTER", "CRAFTABLE" -> new ChatAction(ChatAction.Type.RECIPE_FILTER);
             case "RN", "RECIPENEXT", "NEXTRECIPE", "SCROLLDOWN", "PAGEDOWN" ->
                     new ChatAction(ChatAction.Type.RECIPE_NEXT);
             case "RP", "RECIPEBACK", "RECIPEPREV", "PREVRECIPE", "SCROLLUP", "PAGEUP" ->

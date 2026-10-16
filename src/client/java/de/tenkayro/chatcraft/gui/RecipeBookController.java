@@ -84,6 +84,16 @@ public final class RecipeBookController {
         return "selected recipe variant " + oneBasedIndex;
     }
 
+    public String toggleFilter(MinecraftClient client) {
+        RecipeBookWidget book = openBook(client);
+        if (book == null) return "skipped: recipe book is not ready";
+        ClickableWidget button = ((RecipeBookWidgetAccessor) book).chatcraft$getToggleCraftableButton();
+        if (button == null || !button.visible || !button.active || !click(book, button)) {
+            return "skipped: recipe filter is not available";
+        }
+        return "toggled craftable recipe filter";
+    }
+
     private static RecipeBookWidget openBook(MinecraftClient client) {
         if (client.player == null) return null;
         InventoryScreen screen = inventoryScreen(client);

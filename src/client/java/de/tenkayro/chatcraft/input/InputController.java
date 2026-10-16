@@ -8,11 +8,14 @@ import de.tenkayro.chatcraft.camera.CameraController;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.dashboard.ActivityLog;
 import de.tenkayro.chatcraft.gui.GuiSlotMapper;
+import de.tenkayro.chatcraft.gui.GuiButtonMapper;
 import de.tenkayro.chatcraft.gui.RecipeBookController;
 import de.tenkayro.chatcraft.mixin.MinecraftClientInvoker;
 import de.tenkayro.chatcraft.overlay.SlotOverlayRenderer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.DeathScreen;
+import net.minecraft.client.gui.screen.GameMenuScreen;
+import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.option.KeyBinding;
@@ -43,6 +46,7 @@ public final class InputController {
     private final ActivityLog activity;
     private final CameraController camera = new CameraController();
     private final GuiSlotMapper slots = new GuiSlotMapper();
+    private final GuiButtonMapper buttons = new GuiButtonMapper();
     private final RecipeBookController recipes = new RecipeBookController();
     private final Map<KeyBinding, Long> heldUntil = new HashMap<>();
     private BreakTask breakTask;
@@ -121,6 +125,12 @@ public final class InputController {
             releaseAll();
             return "released all keys";
         }
+        if (client.currentScreen instanceof GameMenuScreen && isScreenAction(action.type())) {
+            return "skipped: pause menu is protected";
+        }
+        if (action.type() == ChatAction.Type.UI_CLICK) {
+            return clickButton(client, action.argument());
+        }
         if (client.player == null) return "skipped: no player";
         int duration = action.durationTicks() > 0
                 ? action.durationTicks()
@@ -154,6 +164,7 @@ public final class InputController {
             case RECIPE_CATEGORY -> { return recipes.selectCategory(client, Integer.parseInt(action.argument())); }
             case RECIPE_NEXT -> { return recipes.changePage(client, true); }
             case RECIPE_PREVIOUS -> { return recipes.changePage(client, false); }
+            case RECIPE_FILTER -> { return recipes.toggleFilter(client); }
             case CAMERA_LEFT -> camera.turn(client, -step, 0);
             case CAMERA_RIGHT -> camera.turn(client, step, 0);
             case CAMERA_UP -> camera.turn(client, 0, -step);
@@ -378,6 +389,26 @@ public final class InputController {
             return "clicked slot " + label;
         }
         return "skipped: slot not found";
+    }
+
+    private String clickButton(MinecraftClient client, String label) {
+        if (client.currentScreen == null) return "skipped: no screen open";
+        if (client.currentScreen instanceof GameMenuScreen) return "skipped: pause menu is protected";
+        ClickableWidget button = buttons.find(client.currentScreen, label);
+        if (button == null) return "skipped: button not found";
+        double x = button.getX() + button.getWidth() / 2.0;
+        double y = button.getY() + button.getHeight() / 2.0;
+        if (!button.mouseClicked(x, y, 0)) return "skipped: button is not available";
+        return "clicked button " + label;
+    }
+
+    private static boolean isScreenAction(ChatAction.Type type) {
+        return switch (type) {
+            case INVENTORY, CLOSE_SCREEN, RECIPE_BOOK, RECIPE_SELECT, RECIPE_ALTERNATIVE,
+                    RECIPE_CATEGORY, RECIPE_NEXT, RECIPE_PREVIOUS, RECIPE_FILTER,
+                    SLOT_LEFT, SLOT_RIGHT, SLOT_SHIFT, UI_CLICK -> true;
+            default -> false;
+        };
     }
 
     private static String describe(ChatAction action) {

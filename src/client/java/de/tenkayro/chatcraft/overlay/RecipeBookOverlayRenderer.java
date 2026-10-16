@@ -44,6 +44,8 @@ public final class RecipeBookOverlayRenderer {
                 drawLabel(context, client, button, "R" + (++visibleIndex));
             }
             RecipeBookResultsAccessor resultAccess = (RecipeBookResultsAccessor) area;
+            drawVisibleLabel(context, client,
+                    ((RecipeBookWidgetAccessor) book).chatcraft$getToggleCraftableButton(), "RF");
             drawVisibleLabel(context, client, resultAccess.chatcraft$getPrevPageButton(), "RP");
             drawVisibleLabel(context, client, resultAccess.chatcraft$getNextPageButton(), "RN");
             RecipeAlternativesWidget alternatives = resultAccess.chatcraft$getAlternatesWidget();

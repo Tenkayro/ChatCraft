@@ -10,6 +10,7 @@ import de.tenkayro.chatcraft.dashboard.ActivityLog;
 import de.tenkayro.chatcraft.dashboard.ChatCraftDashboardServer;
 import de.tenkayro.chatcraft.input.InputController;
 import de.tenkayro.chatcraft.input.BackgroundModeController;
+import de.tenkayro.chatcraft.overlay.ScreenOverlayRenderer;
 import de.tenkayro.chatcraft.twitch.TwitchConnection;
 import de.tenkayro.chatcraft.twitch.TwitchEventSub;
 import de.tenkayro.chatcraft.twitch.TwitchChatFeed;
@@ -50,6 +51,7 @@ public final class ChatCraftClient implements ClientModInitializer {
         backgroundMode = new BackgroundModeController(input);
         dashboard = new ChatCraftDashboardServer(activity);
         dashboard.start();
+        ScreenOverlayRenderer.register();
         ClientTickEvents.END_CLIENT_TICK.register(input::tick);
         ClientTickEvents.END_CLIENT_TICK.register(backgroundMode::tick);
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
