@@ -22,6 +22,7 @@ public final class WorldRestartController {
 
     private final ActivityLog activity;
     private State state = State.IDLE;
+    private MinecraftServer previousServer;
     private String directoryName;
     private String worldName;
     private long deadline;
@@ -51,8 +52,9 @@ public final class WorldRestartController {
 
         directoryName = world.getFileName().toString();
         worldName = server.getSaveProperties().getLevelName();
+        previousServer = server;
         state = State.WAITING_FOR_STOP;
-        deadline = System.currentTimeMillis() + 30_000L;
+        deadline = System.currentTimeMillis() + 120_000L;
         activity.add("admin", "", "?restart", worldName, "saving and closing current world");
         client.disconnect(new TitleScreen());
         return "restarting local world";
@@ -77,8 +79,11 @@ public final class WorldRestartController {
     }
 
     private void waitForStop(MinecraftClient client) throws Exception {
-        MinecraftServer server = client.getServer();
-        if (client.world != null || (server != null && !server.isStopped())) return;
+        // FastQuit clears MinecraftClient#getServer immediately but keeps this exact
+        // server alive while it saves in the background. Retaining the reference
+        // prevents us from opening its still-locked session and triggering FastQuit's
+        // blocking "Waiting for ... to finish saving" screen.
+        if (client.world != null || previousServer == null || !previousServer.isStopped()) return;
 
         LevelStorage storage = client.getLevelStorage();
         Path saves = storage.getSavesDirectory().toAbsolutePath().normalize();
@@ -128,6 +133,7 @@ public final class WorldRestartController {
 
     private void clear() {
         state = State.IDLE;
+        previousServer = null;
         directoryName = null;
         worldName = null;
         deadline = 0L;

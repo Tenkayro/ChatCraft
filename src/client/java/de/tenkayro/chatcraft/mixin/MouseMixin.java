@@ -1,7 +1,6 @@
 package de.tenkayro.chatcraft.mixin;
 
 import de.tenkayro.chatcraft.input.BackgroundModeController;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
