@@ -1,5 +1,6 @@
 {
   "category.chatcraft": "ChatCraft",
-  "key.chatcraft.release_cursor": "Release cursor / background mode",
-  "message.chatcraft.cursor_released": "Cursor released"
+  "key.chatcraft.toggle_chat_control": "Toggle chat-only control",
+  "message.chatcraft.chat_control_on": "Chat control only",
+  "message.chatcraft.chat_control_off": "Local control restored"
 }

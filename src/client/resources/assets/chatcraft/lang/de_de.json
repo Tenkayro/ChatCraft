@@ -1,5 +1,6 @@
 {
   "category.chatcraft": "ChatCraft",
-  "key.chatcraft.release_cursor": "Mauszeiger lösen / Hintergrundmodus",
-  "message.chatcraft.cursor_released": "Mauszeiger frei"
+  "key.chatcraft.toggle_chat_control": "Nur Chat-Steuerung umschalten",
+  "message.chatcraft.chat_control_on": "Nur Chat-Steuerung",
+  "message.chatcraft.chat_control_off": "Eigene Steuerung wieder aktiv"
 }

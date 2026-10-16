@@ -2,6 +2,7 @@ package de.tenkayro.chatcraft.overlay;
 
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.gui.GuiButtonMapper;
+import de.tenkayro.chatcraft.gui.MinecraftMouseController;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -23,6 +24,7 @@ public final class ScreenOverlayRenderer {
     }
 
     private static void render(Screen screen, DrawContext context, int mouseX, int mouseY, float delta) {
+        MinecraftMouseController.update();
         if (!ChatCraftConfig.get().overlayEnabled || screen instanceof GameMenuScreen) return;
         if (screen instanceof HandledScreen<?> handled) SlotOverlayRenderer.render(handled, context);
         if (screen instanceof InventoryScreen inventory) RecipeBookOverlayRenderer.render(inventory, context);

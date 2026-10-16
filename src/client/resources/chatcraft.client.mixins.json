@@ -5,8 +5,10 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "HandledScreenAccessor",
+    "KeyboardMixin",
     "MinecraftClientInvoker",
     "MouseAccessor",
+    "MouseMixin",
     "RecipeAlternativesWidgetAccessor",
     "RecipeBookResultsAccessor",
     "RecipeBookWidgetAccessor"

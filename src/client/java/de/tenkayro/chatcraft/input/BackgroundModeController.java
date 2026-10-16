@@ -9,9 +9,10 @@ import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
 public final class BackgroundModeController {
+    private static volatile boolean chatOnly;
     private final InputController input;
-    private final KeyBinding releaseCursor = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-        "key.chatcraft.release_cursor",
+    private final KeyBinding toggleChatControl = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        "key.chatcraft.toggle_chat_control",
         InputUtil.Type.KEYSYM,
         GLFW.GLFW_KEY_F8,
         "category.chatcraft"
@@ -33,18 +34,19 @@ public final class BackgroundModeController {
             appliedKeepRunning = keepRunning;
         }
 
-        while (releaseCursor.wasPressed()) {
-            if (client.currentScreen != null) continue;
-            if (client.mouse.isCursorLocked()) {
-                input.releaseAll();
-                KeyBinding.unpressAll();
-                client.mouse.unlockCursor();
-                if (client.player != null) {
-                    client.player.sendMessage(Text.translatable("message.chatcraft.cursor_released"), true);
-                }
-            } else {
-                client.mouse.lockCursor();
+        while (toggleChatControl.wasPressed()) {
+            chatOnly = !chatOnly;
+            input.releaseAll();
+            KeyBinding.unpressAll();
+            if (client.player != null) {
+                client.player.sendMessage(Text.translatable(chatOnly
+                        ? "message.chatcraft.chat_control_on"
+                        : "message.chatcraft.chat_control_off"), true);
             }
         }
+    }
+
+    public static boolean isChatOnly() {
+        return chatOnly;
     }
 }

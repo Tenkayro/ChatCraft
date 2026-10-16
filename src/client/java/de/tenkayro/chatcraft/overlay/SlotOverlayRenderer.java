@@ -12,20 +12,18 @@ public final class SlotOverlayRenderer {
     private static final float LABEL_SCALE = 0.75F;
     private static final long CLICK_DURATION_NANOS = 350_000_000L;
     private static final String[] POINTER_PIXELS = {
-            "X...........",
-            "XX..........",
-            "XWX.........",
-            "XWWX........",
-            "XWWWX.......",
-            "XWWWWX......",
-            "XWWWWWX.....",
-            "XWWWWWWX....",
-            "XWWXXXXXX...",
-            "XWWX........",
-            "XWX.X.......",
-            "XX..X.......",
-            "X...X.......",
-            "....XX......"
+            "X.........",
+            "XX........",
+            "XWX.......",
+            "XWWX......",
+            "XWWWX.....",
+            "XWWWWX....",
+            "XWWWWWX...",
+            "XWWXXXX...",
+            "XWX.X.....",
+            "XX..X.....",
+            "X...X.....",
+            "....XX...."
     };
     private static final GuiSlotMapper MAPPER = new GuiSlotMapper();
     private static CursorState cursor;
@@ -88,8 +86,9 @@ public final class SlotOverlayRenderer {
         if (target != null) {
             int left = originX + target.x - 1;
             int top = originY + target.y - 1;
-            int color = now - state.startedAt < CLICK_DURATION_NANOS ? 0xFFFFFF55 : 0xFF55FF55;
-            drawBorder(context, left, top, 18, 18, color);
+            if (now - state.startedAt < CLICK_DURATION_NANOS) {
+                drawBorder(context, left, top, 18, 18, 0xFFFFFF55);
+            }
         }
 
         drawPointer(context, cursorX, cursorY);
