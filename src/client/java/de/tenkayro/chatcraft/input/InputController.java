@@ -49,6 +49,7 @@ public final class InputController {
     private final GuiSlotMapper slots = new GuiSlotMapper();
     private final GuiButtonMapper buttons = new GuiButtonMapper();
     private final RecipeBookController recipes = new RecipeBookController();
+    private final WorldRestartController worldRestart;
     private final Map<KeyBinding, Long> heldUntil = new HashMap<>();
     private BreakTask breakTask;
     private PlaceTask placeTask;
@@ -60,11 +61,13 @@ public final class InputController {
     public InputController(ActionQueue queue, ActivityLog activity) {
         this.queue = queue;
         this.activity = activity;
+        this.worldRestart = new WorldRestartController(activity);
     }
 
     public void tick(MinecraftClient client) {
         tick++;
         try {
+            worldRestart.tick(client);
             camera.tick(client);
             releaseExpired();
             updateWorldActions(client);
@@ -131,6 +134,10 @@ public final class InputController {
         }
         if (action.type() == ChatAction.Type.UI_CLICK) {
             return clickButton(client, action.argument());
+        }
+        if (action.type() == ChatAction.Type.ADMIN_RESTART_WORLD) {
+            releaseAll();
+            return worldRestart.start(client);
         }
         if (client.player == null) return "skipped: no player";
         int duration = action.durationTicks() > 0
@@ -236,7 +243,7 @@ public final class InputController {
     }
 
     private boolean isBusy() {
-        return breakTask != null || placeTask != null || delayedInteraction != null
+        return worldRestart.isRunning() || breakTask != null || placeTask != null || delayedInteraction != null
                 || camera.isTurning() || tick < busyUntilTick;
     }
 

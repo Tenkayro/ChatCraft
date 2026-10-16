@@ -47,22 +47,43 @@ public final class CommandService {
         if (command.length() > 256 || command.indexOf('\n') >= 0 || command.indexOf('\r') >= 0) {
             return rejected(normalizedUser, message, "invalid Minecraft command");
         }
-        queue.offer(new ChatAction(ChatAction.Type.MINECRAFT_COMMAND, command));
-        activity.add("command", normalizedUser, message, "/" + command, "privileged command queued");
+        if (command.equalsIgnoreCase("restart")) {
+            queue.offerPriority(new ChatAction(ChatAction.Type.ADMIN_RESTART_WORLD));
+            activity.add("command", normalizedUser, message, "restart world", "privileged restart queued");
+            return true;
+        }
+        String resolved = resolveAdminAlias(command);
+        queue.offer(new ChatAction(ChatAction.Type.MINECRAFT_COMMAND, resolved));
+        activity.add("command", normalizedUser, message, "/" + resolved, "privileged command queued");
         return true;
     }
 
     public static boolean isMinecraftCommand(String message) {
         if (message == null) return false;
         String value = CommandParser.sanitizeMessage(message).stripLeading();
-        return value.regionMatches(true, 0, "cmd", 0, 3)
-                && value.length() > 3 && Character.isWhitespace(value.charAt(3));
+        return value.regionMatches(true, 0, ".cmd", 0, 4)
+                && value.length() > 4 && Character.isWhitespace(value.charAt(4));
     }
 
     private static String extractMinecraftCommand(String message) {
-        String value = CommandParser.sanitizeMessage(message).stripLeading().substring(3).trim();
+        String value = CommandParser.sanitizeMessage(message).stripLeading().substring(4).trim();
         if (value.startsWith("/")) value = value.substring(1).stripLeading();
         return value;
+    }
+
+    private static String resolveAdminAlias(String command) {
+        return switch (command.toLowerCase(Locale.ROOT)) {
+            case "creative" -> "gamemode creative";
+            case "survival" -> "gamemode survival";
+            case "day" -> "time set day";
+            case "night" -> "time set night";
+            case "clearweather" -> "weather clear";
+            case "keepinventory" -> "gamerule keepInventory true";
+            case "instantrespawn" -> "gamerule doImmediateRespawn true";
+            case "heal" -> "effect give @s minecraft:instant_health 1 10 true";
+            case "feed" -> "effect give @s minecraft:saturation 1 10 true";
+            default -> command;
+        };
     }
 
     private boolean rejected(String user, String message, String reason) {

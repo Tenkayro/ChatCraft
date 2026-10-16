@@ -11,7 +11,8 @@
     "MouseMixin",
     "RecipeAlternativesWidgetAccessor",
     "RecipeBookResultsAccessor",
-    "RecipeBookWidgetAccessor"
+    "RecipeBookWidgetAccessor",
+    "CreateWorldScreenInvoker"
   ],
   "injectors": {
     "defaultRequire": 1
