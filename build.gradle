@@ -51,6 +51,12 @@ tasks.withType(JavaCompile).configureEach {
 	it.options.release = 21
 }
 
+// Loom creates the runClient argument file during project configuration. Reusing
+// Gradle's configuration cache after `clean` can otherwise reference a deleted file.
+tasks.named("runClient").configure {
+	notCompatibleWithConfigurationCache("Fabric Loom run argument files must be regenerated")
+}
+
 java {
 	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
 	// if it is present.
