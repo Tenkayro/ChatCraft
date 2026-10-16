@@ -117,8 +117,10 @@ public final class RecipeBookController {
     }
 
     private static boolean click(RecipeBookWidget book, ClickableWidget button) {
-        return book.mouseClicked(button.getX() + button.getWidth() / 2.0,
-                button.getY() + button.getHeight() / 2.0, 0);
+        double x = button.getX() + button.getWidth() / 2.0;
+        double y = button.getY() + button.getHeight() / 2.0;
+        MinecraftMouseController.moveTo(x, y);
+        return book.mouseClicked(x, y, 0);
     }
 
     private static boolean isUsable(AnimatedResultButton button) {

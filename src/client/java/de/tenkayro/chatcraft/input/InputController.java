@@ -9,6 +9,7 @@ import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.dashboard.ActivityLog;
 import de.tenkayro.chatcraft.gui.GuiSlotMapper;
 import de.tenkayro.chatcraft.gui.GuiButtonMapper;
+import de.tenkayro.chatcraft.gui.MinecraftMouseController;
 import de.tenkayro.chatcraft.gui.RecipeBookController;
 import de.tenkayro.chatcraft.mixin.MinecraftClientInvoker;
 import de.tenkayro.chatcraft.overlay.SlotOverlayRenderer;
@@ -398,6 +399,7 @@ public final class InputController {
         if (button == null) return "skipped: button not found";
         double x = button.getX() + button.getWidth() / 2.0;
         double y = button.getY() + button.getHeight() / 2.0;
+        MinecraftMouseController.moveTo(x, y);
         if (!button.mouseClicked(x, y, 0)) return "skipped: button is not available";
         return "clicked button " + label;
     }

@@ -2,15 +2,14 @@ package de.tenkayro.chatcraft.overlay;
 
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.gui.GuiSlotMapper;
+import de.tenkayro.chatcraft.gui.MinecraftMouseController;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.Slot;
 
 public final class SlotOverlayRenderer {
     private static final float LABEL_SCALE = 0.75F;
-    private static final long MOVE_DURATION_NANOS = 180_000_000L;
     private static final long CLICK_DURATION_NANOS = 350_000_000L;
     private static final String[] POINTER_PIXELS = {
             "X...........",
@@ -63,16 +62,12 @@ public final class SlotOverlayRenderer {
 
     public static void moveCursorTo(HandledScreen<?> screen, Slot slot) {
         long now = System.nanoTime();
-        float targetX = slot.x + 8.0F;
-        float targetY = slot.y + 8.0F;
-        float startX = targetX;
-        float startY = targetY;
-        if (cursor != null && cursor.screen == screen) {
-            float progress = progress(now, cursor.startedAt);
-            startX = lerp(cursor.startX, cursor.targetX, progress);
-            startY = lerp(cursor.startY, cursor.targetY, progress);
-        }
-        cursor = new CursorState(screen, slot.id, startX, startY, targetX, targetY, now);
+        de.tenkayro.chatcraft.mixin.HandledScreenAccessor access =
+                (de.tenkayro.chatcraft.mixin.HandledScreenAccessor) screen;
+        int targetX = access.chatcraft$getX() + slot.x + 8;
+        int targetY = access.chatcraft$getY() + slot.y + 8;
+        MinecraftMouseController.moveTo(targetX, targetY);
+        cursor = new CursorState(screen, slot.id, targetX, targetY, now);
     }
 
     private static void renderVirtualCursor(HandledScreen<?> screen, DrawContext context, MinecraftClient client,
@@ -81,9 +76,10 @@ public final class SlotOverlayRenderer {
         long now = System.nanoTime();
         if (state == null || state.screen != screen) return;
 
-        float progress = progress(now, state.startedAt);
-        int cursorX = originX + Math.round(lerp(state.startX, state.targetX, progress));
-        int cursorY = originY + Math.round(lerp(state.startY, state.targetY, progress));
+        int cursorX = (int) Math.round(client.mouse.getX()
+                * client.getWindow().getScaledWidth() / client.getWindow().getWidth());
+        int cursorY = (int) Math.round(client.mouse.getY()
+                * client.getWindow().getScaledHeight() / client.getWindow().getHeight());
 
         Slot target = screen.getScreenHandler().slots.stream()
                 .filter(slot -> slot.id == state.slotId)
@@ -96,12 +92,6 @@ public final class SlotOverlayRenderer {
             drawBorder(context, left, top, 18, 18, color);
         }
 
-        ItemStack cursorStack = screen.getScreenHandler().getCursorStack();
-        if (!cursorStack.isEmpty()) {
-            int itemX = cursorX + 11;
-            int itemY = cursorY;
-            context.drawItemInSlot(client.textRenderer, cursorStack, itemX, itemY);
-        }
         drawPointer(context, cursorX, cursorY);
     }
 
@@ -128,14 +118,6 @@ public final class SlotOverlayRenderer {
         context.fill(x + width - 1, y, x + width, y + height, color);
     }
 
-    private static float progress(long now, long startedAt) {
-        return Math.min(1.0F, (float) (now - startedAt) / MOVE_DURATION_NANOS);
-    }
-
-    private static float lerp(float start, float end, float progress) {
-        return start + (end - start) * progress;
-    }
-
-    private record CursorState(HandledScreen<?> screen, int slotId, float startX, float startY,
-                               float targetX, float targetY, long startedAt) { }
+    private record CursorState(HandledScreen<?> screen, int slotId, int targetX, int targetY,
+                               long startedAt) { }
 }

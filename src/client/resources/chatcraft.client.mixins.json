@@ -6,6 +6,7 @@
   "client": [
     "HandledScreenAccessor",
     "MinecraftClientInvoker",
+    "MouseAccessor",
     "RecipeAlternativesWidgetAccessor",
     "RecipeBookResultsAccessor",
     "RecipeBookWidgetAccessor"
