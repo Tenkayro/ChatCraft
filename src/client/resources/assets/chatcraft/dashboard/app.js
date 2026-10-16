@@ -57,6 +57,7 @@ function fillSettings(settings) {
   $("settingOverlay").checked = settings.overlayEnabled;
   $("settingAutoConnect").checked = settings.autoConnect;
   $("settingAutoReconnect").checked = settings.autoReconnect;
+  $("settingKeepRunning").checked = settings.keepRunningUnfocused;
 }
 
 function nameList(value) {
@@ -204,7 +205,8 @@ $("settingsForm").addEventListener("submit", async (event) => {
         controlsEnabled: $("settingControls").checked,
         overlayEnabled: $("settingOverlay").checked,
         autoConnect: $("settingAutoConnect").checked,
-        autoReconnect: $("settingAutoReconnect").checked
+        autoReconnect: $("settingAutoReconnect").checked,
+        keepRunningUnfocused: $("settingKeepRunning").checked
       })
     });
     fillSettings(data.settings);

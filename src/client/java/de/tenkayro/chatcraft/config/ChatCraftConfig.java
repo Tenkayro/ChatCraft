@@ -31,6 +31,7 @@ public final class ChatCraftConfig {
     public boolean overlayEnabled = true;
     public boolean autoConnect = false;
     public boolean autoReconnect = true;
+    public boolean keepRunningUnfocused = true;
     public int movementDurationTicks = 10;
     public float cameraStepDegrees = 15.0f;
     public int queueSize = 128;

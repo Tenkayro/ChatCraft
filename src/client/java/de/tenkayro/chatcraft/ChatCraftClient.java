@@ -9,6 +9,7 @@ import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.dashboard.ActivityLog;
 import de.tenkayro.chatcraft.dashboard.ChatCraftDashboardServer;
 import de.tenkayro.chatcraft.input.InputController;
+import de.tenkayro.chatcraft.input.BackgroundModeController;
 import de.tenkayro.chatcraft.twitch.TwitchConnection;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -27,6 +28,7 @@ public final class ChatCraftClient implements ClientModInitializer {
     private static CommandService commands;
     private static TwitchConnection twitch;
     private static InputController input;
+    private static BackgroundModeController backgroundMode;
     private static ActivityLog activity;
     private static ChatCraftDashboardServer dashboard;
 
@@ -38,9 +40,11 @@ public final class ChatCraftClient implements ClientModInitializer {
         commands = new CommandService(new CommandParser(), queue, activity);
         twitch = new TwitchConnection(commands, queue, activity);
         input = new InputController(queue, activity);
+        backgroundMode = new BackgroundModeController(input);
         dashboard = new ChatCraftDashboardServer(activity);
         dashboard.start();
         ClientTickEvents.END_CLIENT_TICK.register(input::tick);
+        ClientTickEvents.END_CLIENT_TICK.register(backgroundMode::tick);
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             if (client.player != null) client.player.sendMessage(dashboardMessage(), false);
         });

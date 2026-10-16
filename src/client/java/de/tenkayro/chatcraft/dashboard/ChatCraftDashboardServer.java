@@ -180,6 +180,7 @@ public final class ChatCraftDashboardServer {
             config.overlayEnabled = bool(request, "overlayEnabled", config.overlayEnabled);
             config.autoConnect = bool(request, "autoConnect", config.autoConnect);
             config.autoReconnect = bool(request, "autoReconnect", config.autoReconnect);
+            config.keepRunningUnfocused = bool(request, "keepRunningUnfocused", config.keepRunningUnfocused);
             config.movementDurationTicks = integer(request, "movementDurationTicks", config.movementDurationTicks);
             config.cameraStepDegrees = decimal(request, "cameraStepDegrees", config.cameraStepDegrees);
             config.queueSize = integer(request, "queueSize", config.queueSize);
@@ -352,6 +353,7 @@ public final class ChatCraftDashboardServer {
         settings.put("overlayEnabled", config.overlayEnabled);
         settings.put("autoConnect", config.autoConnect);
         settings.put("autoReconnect", config.autoReconnect);
+        settings.put("keepRunningUnfocused", config.keepRunningUnfocused);
         settings.put("movementDurationTicks", config.movementDurationTicks);
         settings.put("cameraStepDegrees", config.cameraStepDegrees);
         settings.put("queueSize", config.queueSize);
