@@ -6,4 +6,6 @@ Viewers can control movement, jumping, sneaking, sprinting, camera direction, ho
 
 ChatCraft uses Minecraft's own key bindings and slot interaction APIs. It does not use desktop mouse automation.
 
+It includes a local HTTPS dashboard for Twitch OAuth setup, connection status, chat messages, command decisions, and executed actions.
+
 Full documentation is available in the [ChatCraft Wiki](https://github.com/Tenkayro/ChatCraft/wiki).

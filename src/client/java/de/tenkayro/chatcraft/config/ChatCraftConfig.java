@@ -23,6 +23,7 @@ public final class ChatCraftConfig {
     private static ChatCraftConfig instance;
 
     public String username = "";
+    public String twitchClientId = "";
     public String oauthToken = "";
     public String commandPrefix = "";
     public boolean controlsEnabled = true;
@@ -93,6 +94,8 @@ public final class ChatCraftConfig {
     private void normalize() {
         if (username == null) username = "";
         username = username.trim().toLowerCase(Locale.ROOT).replaceFirst("^[@#]", "");
+        if (twitchClientId == null) twitchClientId = "";
+        twitchClientId = twitchClientId.trim();
         if (oauthToken == null) oauthToken = "";
         if (commandPrefix == null) commandPrefix = "";
         if (whitelist == null) whitelist = new ArrayList<>();

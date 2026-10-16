@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="chatcraft-session" content="__CHATCRAFT_SESSION__">
+  <title>ChatCraft Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <p class="eyebrow">LOCAL CONTROL PANEL</p>
+        <h1>ChatCraft</h1>
+        <p class="subtitle">Twitch chat activity and Minecraft actions in one place.</p>
+      </div>
+      <div id="connectionBadge" class="badge neutral">Loading…</div>
+    </header>
+
+    <section class="stats" aria-label="Current status">
+      <article><span>Connection</span><strong id="connectionText">Loading…</strong></article>
+      <article><span>Queue</span><strong id="queueText">0</strong></article>
+      <article><span>Twitch user</span><strong id="usernameText">Not configured</strong></article>
+      <article><span>Controls</span><strong id="controlsText">—</strong></article>
+    </section>
+
+    <section class="grid">
+      <article class="panel setup-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">SETUP</p><h2>Twitch OAuth</h2></div>
+        </div>
+        <p class="muted">Register this exact redirect URL in the Twitch Developer Console:</p>
+        <div class="copy-row"><code id="redirectUrl">Loading…</code><button id="copyRedirect" class="secondary">Copy</button></div>
+        <form id="oauthForm">
+          <label for="clientId">Twitch Client ID</label>
+          <div class="input-row">
+            <input id="clientId" autocomplete="off" spellcheck="false" placeholder="Enter your Client ID" required>
+            <button type="submit">Authorize with Twitch</button>
+          </div>
+        </form>
+        <p id="oauthMessage" class="message" role="status"></p>
+        <div id="tokenResult" class="token-result" hidden>
+          <label>Access token</label>
+          <code id="tokenValue"></code>
+          <div class="button-row">
+            <button id="copyToken" class="secondary">Copy token</button>
+            <button id="saveToken">Save to ChatCraft</button>
+          </div>
+          <p class="warning">Keep this token private. It grants access to read chat as your Twitch account.</p>
+        </div>
+      </article>
+
+      <article class="panel control-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">CONTROL</p><h2>Connection</h2></div>
+        </div>
+        <p id="connectionDetail" class="detail">Loading status…</p>
+        <div class="button-row">
+          <button id="connectButton">Connect</button>
+          <button id="disconnectButton" class="secondary">Disconnect</button>
+        </div>
+        <p class="muted small">The dashboard is available only on this computer. Minecraft actions still run on the client thread.</p>
+      </article>
+    </section>
+
+    <section class="panel activity-panel">
+      <div class="panel-heading activity-heading">
+        <div><p class="eyebrow">LIVE</p><h2>Activity</h2></div>
+        <div class="filters" aria-label="Activity filter">
+          <button class="filter active" data-filter="all">All</button>
+          <button class="filter" data-filter="chat">Chat</button>
+          <button class="filter" data-filter="command">Commands</button>
+          <button class="filter" data-filter="action">Actions</button>
+          <button class="filter" data-filter="system">System</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Time</th><th>Type</th><th>User / message</th><th>Action / result</th></tr></thead>
+          <tbody id="activityBody"><tr><td colspan="4" class="empty">Waiting for activity…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
+

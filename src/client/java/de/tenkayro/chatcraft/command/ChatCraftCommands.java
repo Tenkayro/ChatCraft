@@ -24,8 +24,13 @@ public final class ChatCraftCommands {
                 }))
                 .then(ClientCommandManager.literal("status").executes(context -> {
                     context.getSource().sendFeedback(Text.literal("ChatCraft: " + ChatCraftClient.twitch().detail()
-                        + ", queued=" + ChatCraftClient.queue().size()));
+                        + ", queued=" + ChatCraftClient.queue().size() + ", dashboard="
+                        + ChatCraftClient.dashboard().detail()));
                     return 1;
+                }))
+                .then(ClientCommandManager.literal("dashboard").executes(context -> {
+                    context.getSource().sendFeedback(ChatCraftClient.dashboardMessage());
+                    return ChatCraftClient.dashboard().running() ? 1 : 0;
                 }))
                 .then(ClientCommandManager.literal("test")
                     .then(ClientCommandManager.argument("command", StringArgumentType.greedyString()).executes(context -> {

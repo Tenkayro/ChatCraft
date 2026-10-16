@@ -5,6 +5,7 @@ import de.tenkayro.chatcraft.action.ActionQueue;
 import de.tenkayro.chatcraft.action.ChatAction;
 import de.tenkayro.chatcraft.camera.CameraController;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
+import de.tenkayro.chatcraft.dashboard.ActivityLog;
 import de.tenkayro.chatcraft.gui.GuiSlotMapper;
 import de.tenkayro.chatcraft.mixin.MinecraftClientInvoker;
 import net.minecraft.client.MinecraftClient;
@@ -21,13 +22,15 @@ import java.util.Map;
 
 public final class InputController {
     private final ActionQueue queue;
+    private final ActivityLog activity;
     private final CameraController camera = new CameraController();
     private final GuiSlotMapper slots = new GuiSlotMapper();
     private final Map<KeyBinding, Long> heldUntil = new HashMap<>();
     private long tick;
 
-    public InputController(ActionQueue queue) {
+    public InputController(ActionQueue queue, ActivityLog activity) {
         this.queue = queue;
+        this.activity = activity;
     }
 
     public void tick(MinecraftClient client) {
@@ -36,7 +39,15 @@ public final class InputController {
             releaseExpired();
             int budget = 16;
             ChatAction action;
-            while (budget-- > 0 && (action = queue.poll()) != null) execute(client, action);
+            while (budget-- > 0 && (action = queue.poll()) != null) {
+                try {
+                    String result = execute(client, action);
+                    activity.add("action", "", "", describe(action), result);
+                } catch (RuntimeException exception) {
+                    activity.add("action", "", "", describe(action), "error: " + exception.getClass().getSimpleName());
+                    throw exception;
+                }
+            }
             if (client.player == null) releaseAll();
         } catch (RuntimeException exception) {
             releaseAll();
@@ -60,12 +71,12 @@ public final class InputController {
         }
     }
 
-    private void execute(MinecraftClient client, ChatAction action) {
+    private String execute(MinecraftClient client, ChatAction action) {
         if (action.type() == ChatAction.Type.RELEASE_ALL) {
             releaseAll();
-            return;
+            return "released all keys";
         }
-        if (client.player == null) return;
+        if (client.player == null) return "skipped: no player";
         int duration = ChatCraftConfig.get().movementDurationTicks;
         float step = ChatCraftConfig.get().cameraStepDegrees;
         switch (action.type()) {
@@ -77,7 +88,8 @@ public final class InputController {
             case SNEAK -> hold(client.options.sneakKey, duration);
             case SPRINT -> hold(client.options.sprintKey, duration);
             case INVENTORY -> {
-                if (client.currentScreen == null) client.setScreen(new InventoryScreen(client.player));
+                if (client.currentScreen != null) return "skipped: screen already open";
+                client.setScreen(new InventoryScreen(client.player));
             }
             case DROP -> client.player.dropSelectedItem(false);
             case HOTBAR -> client.player.getInventory().selectedSlot = Integer.parseInt(action.argument()) - 1;
@@ -90,11 +102,12 @@ public final class InputController {
             case RESPAWN -> {
                 if (client.currentScreen instanceof DeathScreen) client.player.requestRespawn();
             }
-            case SLOT_LEFT -> clickSlot(client, action.argument(), 0, SlotActionType.PICKUP);
-            case SLOT_RIGHT -> clickSlot(client, action.argument(), 1, SlotActionType.PICKUP);
-            case SLOT_SHIFT -> clickSlot(client, action.argument(), 0, SlotActionType.QUICK_MOVE);
+            case SLOT_LEFT -> { return clickSlot(client, action.argument(), 0, SlotActionType.PICKUP); }
+            case SLOT_RIGHT -> { return clickSlot(client, action.argument(), 1, SlotActionType.PICKUP); }
+            case SLOT_SHIFT -> { return clickSlot(client, action.argument(), 0, SlotActionType.QUICK_MOVE); }
             default -> { }
         }
+        return "executed";
     }
 
     private void hold(KeyBinding key, int duration) {
@@ -102,11 +115,19 @@ public final class InputController {
         heldUntil.merge(key, tick + duration, Math::max);
     }
 
-    private void clickSlot(MinecraftClient client, String label, int button, SlotActionType actionType) {
-        if (!(client.currentScreen instanceof HandledScreen<?> screen) || client.interactionManager == null) return;
+    private String clickSlot(MinecraftClient client, String label, int button, SlotActionType actionType) {
+        if (!(client.currentScreen instanceof HandledScreen<?> screen) || client.interactionManager == null) {
+            return "skipped: no container open";
+        }
         Slot slot = slots.find(screen, label);
         if (slot != null) {
             client.interactionManager.clickSlot(screen.getScreenHandler().syncId, slot.id, button, actionType, client.player);
+            return "clicked slot " + label;
         }
+        return "skipped: slot not found";
+    }
+
+    private static String describe(ChatAction action) {
+        return action.argument().isBlank() ? action.type().name() : action.type().name() + " " + action.argument();
     }
 }

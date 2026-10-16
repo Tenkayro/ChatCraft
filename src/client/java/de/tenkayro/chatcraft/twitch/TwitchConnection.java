@@ -5,6 +5,7 @@ import de.tenkayro.chatcraft.action.ActionQueue;
 import de.tenkayro.chatcraft.action.ChatAction;
 import de.tenkayro.chatcraft.command.CommandService;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
+import de.tenkayro.chatcraft.dashboard.ActivityLog;
 
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -26,6 +27,7 @@ public final class TwitchConnection {
 
     private final CommandService commands;
     private final ActionQueue queue;
+    private final ActivityLog activity;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread thread = new Thread(r, "ChatCraft-Twitch");
         thread.setDaemon(true);
@@ -37,9 +39,10 @@ public final class TwitchConnection {
     private volatile SSLSocket socket;
     private int reconnectAttempt;
 
-    public TwitchConnection(CommandService commands, ActionQueue queue) {
+    public TwitchConnection(CommandService commands, ActionQueue queue, ActivityLog activity) {
         this.commands = commands;
         this.queue = queue;
+        this.activity = activity;
     }
 
     public synchronized void connect() {
@@ -53,6 +56,7 @@ public final class TwitchConnection {
         manualDisconnect.set(false);
         state = State.CONNECTING;
         detail = "Connecting";
+        activity.add("system", "", "", "Twitch", "connecting");
         executor.execute(this::runConnection);
     }
 
@@ -63,6 +67,7 @@ public final class TwitchConnection {
         detail = "Disconnected";
         reconnectAttempt = 0;
         queue.offerPriority(new ChatAction(ChatAction.Type.RELEASE_ALL));
+        activity.add("system", "", "", "Twitch", "disconnected");
     }
 
     public State state() { return state; }
@@ -87,6 +92,7 @@ public final class TwitchConnection {
             detail = "Connected to #" + channel;
             reconnectAttempt = 0;
             ChatCraftClient.LOGGER.info("Connected to Twitch channel #{}", channel);
+            activity.add("system", "", "", "Twitch", "connected to #" + channel);
             try (BufferedReader input = new BufferedReader(new InputStreamReader(active.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while (!manualDisconnect.get() && (line = input.readLine()) != null) {
@@ -103,6 +109,7 @@ public final class TwitchConnection {
                 state = State.ERROR;
                 detail = "Connection lost: " + exception.getClass().getSimpleName();
                 ChatCraftClient.LOGGER.warn("Twitch connection lost: {}", exception.toString());
+                activity.add("system", "", "", "Twitch", detail);
             }
         } finally {
             closeSocket();
@@ -128,7 +135,9 @@ public final class TwitchConnection {
             int colon = line.indexOf(':');
             if (colon >= 0 && bang > colon) user = line.substring(colon + 1, bang);
         }
-        commands.submit(user, line.substring(messageStart + 2), false);
+        String message = line.substring(messageStart + 2);
+        activity.add("chat", user, message, "", "received");
+        commands.submit(user, message, false);
     }
 
     private void scheduleReconnect() {
@@ -138,6 +147,7 @@ public final class TwitchConnection {
         }
         long delay = Math.min(60, 2L << Math.min(reconnectAttempt++, 5));
         detail = "Reconnecting in " + delay + "s";
+        activity.add("system", "", "", "Twitch", detail);
         executor.schedule(this::connect, delay, TimeUnit.SECONDS);
     }
 
