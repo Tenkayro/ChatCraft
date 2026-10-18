@@ -143,6 +143,7 @@ public final class ChatCraftDashboardServer {
                 case "/style.css" -> serveResource(exchange, "/assets/chatcraft/dashboard/style.css",
                     "text/css; charset=utf-8");
                 case "/api/status" -> status(exchange);
+                case "/api/credentials" -> credentials(exchange);
                 case "/api/oauth/start" -> startOauth(exchange);
                 case "/api/oauth/token" -> saveOauthToken(exchange);
                 case "/api/youtube/oauth/start" -> startYoutubeOauth(exchange);
@@ -153,10 +154,13 @@ public final class ChatCraftDashboardServer {
                 case "/api/event/test" -> testEvent(exchange);
                 case "/api/token/clear" -> clearToken(exchange);
                 case "/api/control" -> control(exchange);
+                case "/api/diagnostics" -> clientDiagnostic(exchange);
+                case "/api/diagnostics/clear" -> clearDiagnostics(exchange);
                 default -> sendText(exchange, 404, "Not found", "text/plain; charset=utf-8");
             }
         } catch (Exception exception) {
             ChatCraftClient.LOGGER.warn("Dashboard request failed: {}", exception.toString());
+            activity.error("Dashboard", exception.getClass().getSimpleName() + ": " + exception.getMessage());
             if (exchange.getResponseCode() == -1) sendJson(exchange, 500, Map.of("error", "Request failed"));
         } finally {
             exchange.close();
@@ -198,6 +202,7 @@ public final class ChatCraftDashboardServer {
         payload.put("obsUrl", (lanUrl().isBlank() ? baseUrl() : lanUrl()) + "/obs");
         payload.put("settings", settingsPayload(config));
         payload.put("events", activity.snapshot());
+        payload.put("diagnostics", activity.diagnosticSnapshot());
         payload.put("chat", ChatCraftClient.chatFeed().webMessages());
         sendJson(exchange, 200, payload);
     }
@@ -206,7 +211,7 @@ public final class ChatCraftDashboardServer {
         return address.isLoopbackAddress() || address.isSiteLocalAddress() || address.isLinkLocalAddress();
     }
 
-    private static InetAddress findLanAddress() {
+    private InetAddress findLanAddress() {
         try {
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
             while (interfaces.hasMoreElements()) {
@@ -220,6 +225,7 @@ public final class ChatCraftDashboardServer {
             }
         } catch (SocketException exception) {
             ChatCraftClient.LOGGER.warn("Could not determine the LAN address", exception);
+            activity.warn("Network", "Could not determine the LAN address: " + exception.getMessage());
         }
         return null;
     }
@@ -247,6 +253,75 @@ public final class ChatCraftDashboardServer {
         }
         activity.add("system", "", "", "Settings", "saved from dashboard");
         sendJson(exchange, 200, Map.of("ok", true, "settings", settingsPayload(config)));
+    }
+
+    private void credentials(HttpExchange exchange) throws IOException {
+        String requestMethod = exchange.getRequestMethod();
+        if ("GET".equals(requestMethod)) {
+            if (!authorizedRequest(exchange, "GET")) return;
+            sendJson(exchange, 200, credentialsPayload(ChatCraftConfig.get()));
+            return;
+        }
+        if (!"POST".equals(requestMethod)) {
+            exchange.getResponseHeaders().set("Allow", "GET, POST");
+            sendText(exchange, 405, "Method not allowed", "text/plain; charset=utf-8");
+            return;
+        }
+        if (!authorizedRequest(exchange, "POST")) return;
+
+        JsonObject request = readJson(exchange);
+        String platform = string(request, "platform");
+        boolean saveTwitch = "twitch".equals(platform);
+        boolean saveYoutube = "youtube".equals(platform);
+        if (!saveTwitch && !saveYoutube) {
+            sendJson(exchange, 400, Map.of("error", "Unknown credential platform"));
+            return;
+        }
+
+        ChatCraftConfig config = ChatCraftConfig.get();
+        String twitchClientId = saveTwitch ? string(request, "twitchClientId").trim() : config.twitchClientId;
+        String twitchOauthToken = saveTwitch ? string(request, "twitchOauthToken").trim() : config.oauthToken;
+        String youtubeClientId = saveYoutube ? string(request, "youtubeClientId").trim() : config.youtubeClientId;
+        String youtubeClientSecret = saveYoutube ? string(request, "youtubeClientSecret").trim() : config.youtubeClientSecret;
+        String youtubeRefreshToken = saveYoutube ? string(request, "youtubeRefreshToken").trim() : config.youtubeRefreshToken;
+
+        if (saveTwitch && !twitchClientId.isBlank() && !twitchClientId.matches("[A-Za-z0-9]{5,100}")) {
+            sendJson(exchange, 400, Map.of("error", "Enter a valid Twitch Client ID"));
+            return;
+        }
+        if ((saveTwitch && twitchOauthToken.length() > 512) || (saveYoutube && (youtubeClientSecret.length() > 256
+                || youtubeRefreshToken.length() > 4096 || youtubeClientId.length() > 256
+                || (!youtubeClientId.isBlank() && !youtubeClientId.endsWith(".apps.googleusercontent.com"))))) {
+            sendJson(exchange, 400, Map.of("error", "One or more credentials are invalid"));
+            return;
+        }
+
+        boolean twitchChanged = saveTwitch && (!Objects.equals(config.twitchClientId, twitchClientId)
+                || !Objects.equals(config.oauthToken, twitchOauthToken));
+        boolean youtubeChanged = saveYoutube && (!Objects.equals(config.youtubeClientId, youtubeClientId)
+                || !Objects.equals(config.youtubeClientSecret, youtubeClientSecret)
+                || !Objects.equals(config.youtubeRefreshToken, youtubeRefreshToken));
+        if (twitchChanged) ChatCraftClient.twitch().disconnect();
+        if (youtubeChanged) ChatCraftClient.youtube().disconnect();
+
+        synchronized (config) {
+            if (saveTwitch) {
+                config.twitchClientId = twitchClientId;
+                config.oauthToken = twitchOauthToken;
+            }
+            if (saveYoutube) {
+                config.youtubeClientId = youtubeClientId;
+                config.youtubeClientSecret = youtubeClientSecret;
+                config.youtubeRefreshToken = youtubeRefreshToken;
+            }
+            if (youtubeChanged) {
+                config.youtubeAccessToken = "";
+                config.youtubeAccessTokenExpiresAt = 0;
+            }
+            config.save();
+        }
+        activity.add("system", "", "", "Credentials", "saved securely from dashboard");
+        sendJson(exchange, 200, credentialsPayload(config));
     }
 
     private void clearToken(HttpExchange exchange) throws IOException {
@@ -426,6 +501,31 @@ public final class ChatCraftDashboardServer {
         sendJson(exchange, 200, Map.of("ok", true));
     }
 
+    private void clientDiagnostic(HttpExchange exchange) throws IOException {
+        if (!authorizedPost(exchange)) return;
+        JsonObject request = readJson(exchange);
+        String level = string(request, "level").toLowerCase(java.util.Locale.ROOT);
+        String source = string(request, "source");
+        String message = string(request, "message");
+        if (source.isBlank()) source = "Web panel";
+        if (message.isBlank()) {
+            sendJson(exchange, 400, Map.of("error", "Diagnostic message is required"));
+            return;
+        }
+        switch (level) {
+            case "error" -> activity.error(source, message);
+            case "warning", "warn" -> activity.warn(source, message);
+            default -> activity.info(source, message);
+        }
+        sendJson(exchange, 200, Map.of("ok", true));
+    }
+
+    private void clearDiagnostics(HttpExchange exchange) throws IOException {
+        if (!authorizedPost(exchange)) return;
+        activity.clearDiagnostics();
+        sendJson(exchange, 200, Map.of("ok", true));
+    }
+
     private void applyGameRule(HttpExchange exchange) throws IOException {
         if (!authorizedPost(exchange)) return;
         JsonObject request = readJson(exchange);
@@ -496,7 +596,11 @@ public final class ChatCraftDashboardServer {
     }
 
     private boolean authorizedPost(HttpExchange exchange) throws IOException {
-        if (!method(exchange, "POST")) return false;
+        return authorizedRequest(exchange, "POST");
+    }
+
+    private boolean authorizedRequest(HttpExchange exchange, String expectedMethod) throws IOException {
+        if (!method(exchange, expectedMethod)) return false;
         String supplied = exchange.getRequestHeaders().getFirst("X-ChatCraft-Session");
         if (!constantTimeEquals(sessionNonce, supplied)) {
             sendJson(exchange, 403, Map.of("error", "Invalid dashboard session"));
@@ -557,6 +661,16 @@ public final class ChatCraftDashboardServer {
         settings.put("whitelist", config.whitelist);
         settings.put("blacklist", config.blacklist);
         return settings;
+    }
+
+    private static Map<String, Object> credentialsPayload(ChatCraftConfig config) {
+        Map<String, Object> credentials = new LinkedHashMap<>();
+        credentials.put("twitchClientId", config.twitchClientId);
+        credentials.put("twitchOauthToken", config.oauthToken);
+        credentials.put("youtubeClientId", config.youtubeClientId);
+        credentials.put("youtubeClientSecret", config.youtubeClientSecret);
+        credentials.put("youtubeRefreshToken", config.youtubeRefreshToken);
+        return credentials;
     }
 
     private static boolean method(HttpExchange exchange, String expected) throws IOException {

@@ -124,6 +124,7 @@ public final class TwitchEventSub {
             if ("channel.follow".equals(type)) enqueueFollow(user, false);
         } catch (RuntimeException exception) {
             ChatCraftClient.LOGGER.warn("Could not read Twitch EventSub message", exception);
+            activity.warn("EventSub", "Could not read a Twitch event: " + exception.getClass().getSimpleName());
         }
     }
 
@@ -267,7 +268,10 @@ public final class TwitchEventSub {
 
         @Override
         public void onError(WebSocket webSocket, Throwable error) {
-            if (enabled.get()) ChatCraftClient.LOGGER.warn("Twitch EventSub WebSocket error", error);
+            if (enabled.get()) {
+                ChatCraftClient.LOGGER.warn("Twitch EventSub WebSocket error", error);
+                activity.error("EventSub", "WebSocket error: " + error.getClass().getSimpleName());
+            }
         }
     }
 

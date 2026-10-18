@@ -121,27 +121,32 @@ public final class YouTubeConnection {
     }
 
     private void discoverChat() throws Exception {
-        JsonObject json = getJson(API + "liveBroadcasts?part=snippet&broadcastStatus=active&mine=true&maxResults=5");
+        JsonObject json = getJson(API + "liveBroadcasts?part=snippet,status&mine=true&broadcastType=all&maxResults=50");
         JsonArray items = json.getAsJsonArray("items");
-        if (items == null || items.isEmpty()) {
-            state = State.CONNECTING;
-            detail = "Waiting for an active YouTube broadcast";
-            schedule(this::discoverAndPoll, 15_000);
-            return;
-        }
-        for (var element : items) {
-            JsonObject snippet = element.getAsJsonObject().getAsJsonObject("snippet");
-            if (snippet != null && snippet.has("liveChatId")) {
-                liveChatId = snippet.get("liveChatId").getAsString();
-                String title = snippet.has("title") ? snippet.get("title").getAsString() : "live stream";
-                state = State.CONNECTED;
-                detail = "Connected to YouTube: " + title;
-                activity.add("system", "", "", "YouTube", detail);
-                break;
+        boolean liveBroadcastFound = false;
+        if (items != null) {
+            for (var element : items) {
+                JsonObject broadcast = element.getAsJsonObject();
+                JsonObject status = broadcast.getAsJsonObject("status");
+                if (!"live".equals(string(status, "lifeCycleStatus"))) continue;
+
+                liveBroadcastFound = true;
+                JsonObject snippet = broadcast.getAsJsonObject("snippet");
+                if (snippet != null && snippet.has("liveChatId")) {
+                    liveChatId = snippet.get("liveChatId").getAsString();
+                    String title = snippet.has("title") ? snippet.get("title").getAsString() : "live stream";
+                    state = State.CONNECTED;
+                    detail = "Connected to YouTube: " + title;
+                    activity.add("system", "", "", "YouTube", detail);
+                    break;
+                }
             }
         }
         if (liveChatId.isBlank()) {
-            detail = "Active broadcast has no live chat";
+            state = State.CONNECTING;
+            detail = liveBroadcastFound
+                    ? "Active YouTube broadcast has no live chat"
+                    : "Waiting for an active YouTube broadcast";
             schedule(this::discoverAndPoll, 15_000);
         }
     }

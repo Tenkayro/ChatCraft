@@ -113,9 +113,13 @@ tasks.register("buildToPrismLauncher", Copy) {
 
 tasks.register("startPrism", Exec) {
 	group = "custom"
-	description = "Builds and installs ChatCraft, then launches the configured Prism Launcher instance."
+	description = "Builds and installs ChatCraft, then launches the configured Prism Launcher instance without blocking Gradle."
 	dependsOn tasks.named("buildToPrismLauncher")
-	commandLine prismLauncherExecutable, "--launch", prismInstanceId
+	environment "CHATCRAFT_PRISM_EXE", prismLauncherExecutable
+	environment "CHATCRAFT_PRISM_INSTANCE", prismInstanceId
+	environment "CHATCRAFT_PRISM_LAUNCH_FLAG", "--launch"
+	commandLine "powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
+		'Start-Process -FilePath $env:CHATCRAFT_PRISM_EXE -ArgumentList @($env:CHATCRAFT_PRISM_LAUNCH_FLAG, $env:CHATCRAFT_PRISM_INSTANCE) -WindowStyle Normal'
 }
 
 // configure the maven publication

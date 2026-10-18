@@ -79,6 +79,7 @@ public final class InputController {
         } catch (RuntimeException exception) {
             releaseAll();
             ChatCraftClient.LOGGER.error("Failed to execute a queued action; all simulated keys were released", exception);
+            activity.error("Input", "Queued action failed: " + exception.getClass().getSimpleName());
         }
     }
 

@@ -21,6 +21,7 @@
         <a href="#settings"><i class="fa-solid fa-sliders"></i><span>Settings</span></a>
         <a href="#tools"><i class="fa-solid fa-toolbox"></i><span>Tools</span></a>
         <a href="#activity"><i class="fa-solid fa-list-ul"></i><span>Activity</span></a>
+        <a href="#console"><i class="fa-solid fa-terminal"></i><span>Console</span></a>
       </nav>
       <div class="sidebar-foot"><span class="pulse"></span> Minecraft is running</div>
     </aside>
@@ -51,7 +52,7 @@
               <span id="connectionText" class="state-pill">Loading</span>
             </div>
             <div class="button-row"><button id="connectButton"><i class="fa-solid fa-play"></i> Connect</button><button id="disconnectButton" class="secondary"><i class="fa-solid fa-stop"></i> Disconnect</button></div>
-            <details id="twitchSetup" class="setup-guide">
+            <details id="twitchSetup" class="setup-guide" open>
               <summary><span><i class="fa-solid fa-wand-magic-sparkles"></i> Set up Twitch</span><i class="fa-solid fa-chevron-down chevron"></i></summary>
               <div class="details-body">
                 <ol class="steps">
@@ -60,8 +61,11 @@
                 </ol>
                 <div class="copy-row"><code id="redirectUrl">Loading…</code><button id="copyRedirect" class="icon-button secondary" title="Copy" aria-label="Copy Twitch redirect URL"><i class="fa-regular fa-copy"></i></button></div>
                 <form id="oauthForm">
-                  <label for="clientId">Client ID</label>
-                  <div class="input-row"><input id="clientId" autocomplete="off" spellcheck="false" placeholder="Twitch Client ID" required><button type="submit"><i class="fa-solid fa-arrow-up-right-from-square"></i> Autorisieren</button></div>
+                  <div class="form-grid credential-grid">
+                    <label>Client ID<div class="secret-input"><input id="clientId" type="password" autocomplete="off" spellcheck="false" placeholder="Twitch Client ID" required><button class="reveal-secret" type="button" data-secret="clientId" title="Show Client ID" aria-label="Show Client ID"><i class="fa-regular fa-eye"></i></button></div></label>
+                    <label>Access Token<div class="secret-input"><input id="twitchOauthToken" type="password" autocomplete="off" spellcheck="false" placeholder="Twitch OAuth token"><button class="reveal-secret" type="button" data-secret="twitchOauthToken" title="Show access token" aria-label="Show access token"><i class="fa-regular fa-eye"></i></button></div></label>
+                  </div>
+                  <div class="button-row credential-actions"><button id="saveTwitchCredentials" class="secondary" type="button"><i class="fa-solid fa-floppy-disk"></i> Save credentials</button><button type="submit"><i class="fa-solid fa-arrow-up-right-from-square"></i> Authorize Twitch</button></div>
                 </form>
                 <p id="oauthMessage" class="message" role="status"></p>
                 <div class="token-status-row"><span><i class="fa-solid fa-key"></i> Authorization</span><strong id="tokenStatus">Checking…</strong><button id="clearToken" class="text-danger" type="button">Remove</button></div>
@@ -81,7 +85,7 @@
               <span id="youtubeConnectionText" class="state-pill">Loading</span>
             </div>
             <div class="button-row"><button id="youtubeConnectButton"><i class="fa-solid fa-play"></i> Connect</button><button id="youtubeDisconnectButton" class="secondary"><i class="fa-solid fa-stop"></i> Disconnect</button></div>
-            <details id="youtubeSetup" class="setup-guide">
+            <details id="youtubeSetup" class="setup-guide" open>
               <summary><span><i class="fa-solid fa-wand-magic-sparkles"></i> Set up YouTube</span><i class="fa-solid fa-chevron-down chevron"></i></summary>
               <div class="details-body">
                 <ol class="steps">
@@ -90,11 +94,12 @@
                 </ol>
                 <div class="copy-row"><code id="youtubeRedirectUrl">Loading…</code><button id="copyYoutubeRedirect" class="icon-button secondary" title="Copy" aria-label="Copy YouTube redirect URL"><i class="fa-regular fa-copy"></i></button></div>
                 <form id="youtubeOauthForm">
-                  <div class="form-grid">
-                    <label>Client ID<input id="youtubeClientId" autocomplete="off" spellcheck="false" placeholder="…apps.googleusercontent.com" required></label>
-                    <label>Client Secret<input id="youtubeClientSecret" type="password" autocomplete="off" spellcheck="false" placeholder="Google Client Secret" required></label>
+                  <div class="form-grid credential-grid">
+                    <label>Client ID<div class="secret-input"><input id="youtubeClientId" type="password" autocomplete="off" spellcheck="false" placeholder="…apps.googleusercontent.com" required><button class="reveal-secret" type="button" data-secret="youtubeClientId" title="Show Client ID" aria-label="Show Client ID"><i class="fa-regular fa-eye"></i></button></div></label>
+                    <label>Client Secret<div class="secret-input"><input id="youtubeClientSecret" type="password" autocomplete="off" spellcheck="false" placeholder="Google Client Secret" required><button class="reveal-secret" type="button" data-secret="youtubeClientSecret" title="Show client secret" aria-label="Show client secret"><i class="fa-regular fa-eye"></i></button></div></label>
+                    <label>Refresh Token<div class="secret-input"><input id="youtubeRefreshToken" type="password" autocomplete="off" spellcheck="false" placeholder="Created during authorization"><button class="reveal-secret" type="button" data-secret="youtubeRefreshToken" title="Show refresh token" aria-label="Show refresh token"><i class="fa-regular fa-eye"></i></button></div></label>
                   </div>
-                  <button type="submit"><i class="fa-solid fa-arrow-up-right-from-square"></i> Authorize YouTube</button>
+                  <div class="button-row credential-actions"><button id="saveYoutubeCredentials" class="secondary" type="button"><i class="fa-solid fa-floppy-disk"></i> Save credentials</button><button type="submit"><i class="fa-solid fa-arrow-up-right-from-square"></i> Authorize YouTube</button></div>
                 </form>
                 <p id="youtubeOauthMessage" class="message" role="status"></p>
                 <div class="token-status-row"><span><i class="fa-solid fa-key"></i> Authorization</span><strong id="youtubeTokenStatus">Checking…</strong><button id="clearYoutubeToken" class="text-danger" type="button">Remove</button></div>
@@ -176,6 +181,20 @@
           <div class="filters" aria-label="Activity filters"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="chat">Chat</button><button class="filter" data-filter="command">Commands</button><button class="filter" data-filter="event">Events</button><button class="filter" data-filter="action">Actions</button><button class="filter" data-filter="system">System</button></div>
         </div>
         <div class="panel activity-panel"><div class="table-wrap"><table><thead><tr><th>Time</th><th>Type</th><th>User / message</th><th>Action / result</th></tr></thead><tbody id="activityBody"><tr><td colspan="4" class="empty">No activity yet.</td></tr></tbody></table></div></div>
+      </section>
+
+      <section id="console" class="section-block console-section">
+        <div class="section-heading console-heading">
+          <div><p class="eyebrow">Diagnostics</p><h2>Console <span id="consoleErrorCount" class="error-count" hidden>0 errors</span></h2></div>
+          <div class="console-actions">
+            <div class="console-filters" aria-label="Console filters"><button class="console-filter active" data-level="all">All</button><button class="console-filter" data-level="info">Info</button><button class="console-filter" data-level="warning">Warnings</button><button class="console-filter" data-level="error">Errors</button></div>
+            <button id="clearConsole" class="ghost"><i class="fa-solid fa-trash-can"></i> Clear</button>
+          </div>
+        </div>
+        <div class="console-panel" role="log" aria-live="polite">
+          <div class="console-toolbar"><span><i class="fa-solid fa-circle-info"></i> Runtime, connection, API, and web panel messages</span><span id="consoleCount">0 entries</span></div>
+          <div id="consoleBody" class="console-body"><div class="console-empty"><i class="fa-solid fa-check-circle"></i><span>No diagnostic messages yet.</span></div></div>
+        </div>
       </section>
     </main>
   </div>
