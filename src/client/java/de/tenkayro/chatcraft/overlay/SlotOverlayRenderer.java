@@ -7,24 +7,17 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.util.Identifier;
 
 public final class SlotOverlayRenderer {
     private static final float LABEL_SCALE = 0.75F;
     private static final long CLICK_DURATION_NANOS = 350_000_000L;
-    private static final String[] POINTER_PIXELS = {
-            "X.........",
-            "XX........",
-            "XWX.......",
-            "XWWX......",
-            "XWWWX.....",
-            "XWWWWX....",
-            "XWWWWWX...",
-            "XWWXXXX...",
-            "XWX.X.....",
-            "XX..X.....",
-            "X...X.....",
-            "....XX...."
-    };
+    private static final Identifier CURSOR_TEXTURE =
+            Identifier.of("chatcraft", "textures/gui/cursor.png");
+    private static final int CURSOR_TEXTURE_SIZE = 32;
+    private static final int CURSOR_RENDER_SIZE = 16;
+    private static final int CURSOR_HOTSPOT_X = 1;
+    private static final int CURSOR_HOTSPOT_Y = 1;
     private static final GuiSlotMapper MAPPER = new GuiSlotMapper();
     private static CursorState cursor;
 
@@ -95,19 +88,11 @@ public final class SlotOverlayRenderer {
     }
 
     private static void drawPointer(DrawContext context, int x, int y) {
-        for (int row = 0; row < POINTER_PIXELS.length; row++) {
-            String pixels = POINTER_PIXELS[row];
-            for (int column = 0; column < pixels.length(); column++) {
-                int color = switch (pixels.charAt(column)) {
-                    case 'X' -> 0xFF101010;
-                    case 'W' -> 0xFFFFFFFF;
-                    default -> 0;
-                };
-                if (color != 0) {
-                    context.fill(x + column, y + row, x + column + 1, y + row + 1, color);
-                }
-            }
-        }
+        context.drawTexture(CURSOR_TEXTURE,
+                x - CURSOR_HOTSPOT_X, y - CURSOR_HOTSPOT_Y,
+                0.0F, 0.0F,
+                CURSOR_RENDER_SIZE, CURSOR_RENDER_SIZE,
+                CURSOR_TEXTURE_SIZE, CURSOR_TEXTURE_SIZE);
     }
 
     private static void drawBorder(DrawContext context, int x, int y, int width, int height, int color) {

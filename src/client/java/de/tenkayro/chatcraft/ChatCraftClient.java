@@ -8,6 +8,7 @@ import de.tenkayro.chatcraft.command.CommandService;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.dashboard.ActivityLog;
 import de.tenkayro.chatcraft.dashboard.ChatCraftDashboardServer;
+import de.tenkayro.chatcraft.gui.CustomCursor;
 import de.tenkayro.chatcraft.input.InputController;
 import de.tenkayro.chatcraft.input.BackgroundModeController;
 import de.tenkayro.chatcraft.overlay.ScreenOverlayRenderer;
@@ -55,6 +56,7 @@ public final class ChatCraftClient implements ClientModInitializer {
         dashboard = new ChatCraftDashboardServer(activity);
         dashboard.start();
         ScreenOverlayRenderer.register();
+        ClientLifecycleEvents.CLIENT_STARTED.register(CustomCursor::install);
         ClientTickEvents.END_CLIENT_TICK.register(input::tick);
         ClientTickEvents.END_CLIENT_TICK.register(backgroundMode::tick);
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
@@ -62,6 +64,7 @@ public final class ChatCraftClient implements ClientModInitializer {
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> input.releaseAll());
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            CustomCursor.destroy(client);
             twitch.disconnect();
             youtube.close();
             chatFeed.close();
