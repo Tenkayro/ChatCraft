@@ -22,11 +22,15 @@ import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.FoodComponent;
 import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.UseAction;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -53,6 +57,7 @@ public final class InputController {
     private final Map<KeyBinding, Long> heldUntil = new HashMap<>();
     private BreakTask breakTask;
     private PlaceTask placeTask;
+    private ConsumeTask consumeTask;
     private DelayedInteraction delayedInteraction;
     private boolean sneakToggled;
     private long busyUntilTick;
@@ -169,6 +174,7 @@ public final class InputController {
             case HOTBAR -> selectHotbar(client, Integer.parseInt(action.argument()) - 1);
             case ATTACK -> ((MinecraftClientInvoker) client).chatcraft$doAttack();
             case USE -> ((MinecraftClientInvoker) client).chatcraft$doItemUse();
+            case CONSUME -> { return startConsuming(client); }
             case BREAK -> { return startBreaking(client); }
             case PLACE -> { return placeBlock(client); }
             case RECIPE_BOOK -> { return recipes.toggle(client); }
@@ -248,7 +254,8 @@ public final class InputController {
     }
 
     private boolean isBusy() {
-        return worldRestart.isRunning() || breakTask != null || placeTask != null || delayedInteraction != null
+        return worldRestart.isRunning() || breakTask != null || placeTask != null || consumeTask != null
+                || delayedInteraction != null
                 || camera.isTurning() || tick < busyUntilTick;
     }
 
@@ -281,6 +288,50 @@ public final class InputController {
         }
         if (!(client.crosshairTarget instanceof BlockHitResult hit)) return "skipped: no block targeted";
         return placeBlockAt(client, hit);
+    }
+
+    private String startConsuming(MinecraftClient client) {
+        if (client.world == null || client.interactionManager == null) {
+            return "skipped: world is not ready";
+        }
+        if (client.currentScreen instanceof GameMenuScreen) {
+            return "skipped: pause menu is protected";
+        }
+
+        Hand hand = null;
+        ItemStack stack = ItemStack.EMPTY;
+        UseAction useAction = UseAction.NONE;
+        for (Hand candidate : Hand.values()) {
+            ItemStack candidateStack = client.player.getStackInHand(candidate);
+            UseAction candidateAction = candidateStack.getUseAction();
+            if (candidateAction == UseAction.EAT || candidateAction == UseAction.DRINK) {
+                hand = candidate;
+                stack = candidateStack;
+                useAction = candidateAction;
+                break;
+            }
+        }
+        if (hand == null) return "skipped: no food or drink in either hand";
+
+        FoodComponent food = stack.get(DataComponentTypes.FOOD);
+        if (useAction == UseAction.EAT && food != null && !food.canAlwaysEat()
+                && !client.player.getHungerManager().isNotFull()) {
+            return "skipped: hunger is already full";
+        }
+
+        if (client.currentScreen != null) client.currentScreen.close();
+        cancelWorldActions();
+        client.options.useKey.setPressed(true);
+        ActionResult result = client.interactionManager.interactItem(client.player, hand);
+        if (!result.isAccepted()) {
+            client.options.useKey.setPressed(false);
+            return "failed: Minecraft rejected the item use";
+        }
+
+        int maxUseTicks = Math.max(1, stack.getMaxUseTime(client.player));
+        consumeTask = new ConsumeTask(hand, useAction, stack.getItem(), stack.getCount(),
+                tick + 10, tick + Math.max(80, maxUseTicks + 40));
+        return useAction == UseAction.EAT ? "eating until complete" : "drinking until complete";
     }
 
     private String placeBlockBelowPlayer(MinecraftClient client) {
@@ -317,6 +368,44 @@ public final class InputController {
         if (delayedInteraction != null) updateDelayedInteraction(client);
         if (breakTask != null) updateBreaking(client);
         if (placeTask != null) updatePlacement(client);
+        if (consumeTask != null) updateConsuming(client);
+    }
+
+    private void updateConsuming(MinecraftClient client) {
+        ConsumeTask task = consumeTask;
+        if (client.world == null || client.player == null || client.interactionManager == null) {
+            finishConsuming(client, "cancelled: world closed", true);
+            return;
+        }
+
+        ItemStack currentStack = client.player.getStackInHand(task.hand);
+        boolean itemConsumed = !currentStack.isOf(task.item) || currentStack.getCount() < task.initialCount;
+        if (itemConsumed) {
+            finishConsuming(client, task.useAction == UseAction.EAT
+                    ? "confirmed: food eaten" : "confirmed: drink consumed", false);
+            return;
+        }
+
+        if (tick >= task.expiresAtTick) {
+            finishConsuming(client, "failed: item use timed out", true);
+            return;
+        }
+
+        if (client.player.isUsingItem()) {
+            task.startedUsing = true;
+            client.options.useKey.setPressed(true);
+            return;
+        }
+        if (task.startedUsing) {
+            finishConsuming(client, task.useAction == UseAction.EAT
+                    ? "confirmed: food eaten" : "confirmed: drink consumed", false);
+            return;
+        }
+        if (tick >= task.startDeadlineTick) {
+            finishConsuming(client, "failed: item use did not start", true);
+            return;
+        }
+        client.options.useKey.setPressed(true);
     }
 
     private void updateDelayedInteraction(MinecraftClient client) {
@@ -382,12 +471,26 @@ public final class InputController {
         activity.add("action", "", "", "PLACE", result);
     }
 
+    private void finishConsuming(MinecraftClient client, String result, boolean cancelActiveUse) {
+        client.options.useKey.setPressed(false);
+        if (cancelActiveUse && client.player != null && client.player.isUsingItem()) {
+            client.player.stopUsingItem();
+        }
+        consumeTask = null;
+        activity.add("action", "", "", "CONSUME", result);
+    }
+
     private void cancelWorldActions() {
         MinecraftClient client = MinecraftClient.getInstance();
         client.options.attackKey.setPressed(false);
         if (breakTask != null && client.interactionManager != null) client.interactionManager.cancelBlockBreaking();
+        if (consumeTask != null) {
+            client.options.useKey.setPressed(false);
+            if (client.player != null && client.player.isUsingItem()) client.player.stopUsingItem();
+        }
         breakTask = null;
         placeTask = null;
+        consumeTask = null;
         delayedInteraction = null;
     }
 
@@ -432,6 +535,25 @@ public final class InputController {
 
     private record BreakTask(BlockPos position, Direction side, Block originalBlock, long expiresAtTick) { }
     private record PlaceTask(BlockPos position, Block expectedBlock, BlockState previousState, long expiresAtTick) { }
+    private static final class ConsumeTask {
+        private final Hand hand;
+        private final UseAction useAction;
+        private final Item item;
+        private final int initialCount;
+        private final long startDeadlineTick;
+        private final long expiresAtTick;
+        private boolean startedUsing;
+
+        private ConsumeTask(Hand hand, UseAction useAction, Item item, int initialCount,
+                            long startDeadlineTick, long expiresAtTick) {
+            this.hand = hand;
+            this.useAction = useAction;
+            this.item = item;
+            this.initialCount = initialCount;
+            this.startDeadlineTick = startDeadlineTick;
+            this.expiresAtTick = expiresAtTick;
+        }
+    }
     private record DelayedInteraction(ChatAction.Type type, boolean belowPlayer,
                                       long nextAttemptTick, long expiresAtTick) { }
 }

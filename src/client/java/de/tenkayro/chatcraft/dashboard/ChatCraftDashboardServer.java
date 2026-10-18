@@ -37,6 +37,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public final class ChatCraftDashboardServer {
     public static final int DEFAULT_PORT = 38473;
@@ -47,8 +51,19 @@ public final class ChatCraftDashboardServer {
     private final ActivityLog activity;
     private final String sessionNonce = randomHex(24);
     private final HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+    private final ScheduledExecutorService supervisor = Executors.newSingleThreadScheduledExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "ChatCraft-Dashboard-Supervisor");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private final AtomicLong requestCount = new AtomicLong();
+    private final AtomicLong failedRequestCount = new AtomicLong();
     private volatile HttpsServer server;
     private volatile ExecutorService executor;
+    private volatile ScheduledFuture<?> startRetry;
+    private volatile boolean desiredRunning;
+    private int startFailureCount;
+    private volatile long startedAt;
     private volatile int activePort;
     private volatile InetAddress lanAddress;
     private volatile String oauthState = "";
@@ -62,13 +77,16 @@ public final class ChatCraftDashboardServer {
     }
 
     public synchronized void start() {
+        desiredRunning = true;
         if (server != null) return;
         int port = ChatCraftConfig.get().dashboardPort;
         activePort = port;
+        HttpsServer active = null;
+        ExecutorService threads = null;
         try {
             lanAddress = findLanAddress();
             SSLContext sslContext = LocalTlsCertificate.createContext(lanAddress);
-            HttpsServer active = HttpsServer.create(new InetSocketAddress(port), 0);
+            active = HttpsServer.create(new InetSocketAddress(port), 0);
             active.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
                 @Override
                 public void configure(HttpsParameters parameters) {
@@ -78,26 +96,39 @@ public final class ChatCraftDashboardServer {
                 }
             });
             active.createContext("/", this::handle);
-            ExecutorService threads = Executors.newFixedThreadPool(3, runnable -> {
+            threads = Executors.newFixedThreadPool(4, runnable -> {
                 Thread thread = new Thread(runnable, "ChatCraft-Dashboard");
                 thread.setDaemon(true);
+                thread.setUncaughtExceptionHandler((failedThread, exception) -> {
+                    ChatCraftClient.LOGGER.error("Uncaught dashboard worker error", exception);
+                    activity.error("Dashboard worker", "A dashboard worker terminated unexpectedly", exception);
+                });
                 return thread;
             });
             active.setExecutor(threads);
             active.start();
             executor = threads;
             server = active;
+            startedAt = System.currentTimeMillis();
+            startFailureCount = 0;
+            cancelStartRetry();
             detail = "Running on " + baseUrl();
             activity.add("system", "", "", "Dashboard", detail);
             ChatCraftClient.LOGGER.info("ChatCraft dashboard started at {} (LAN: {})", baseUrl(), lanUrl());
         } catch (Exception exception) {
+            if (active != null) active.stop(0);
+            if (threads != null) threads.shutdownNow();
             detail = "Could not start: " + exception.getClass().getSimpleName();
             activity.add("system", "", "", "Dashboard", detail);
+            activity.error("Dashboard startup", "Could not start HTTPS dashboard on port " + port, exception);
             ChatCraftClient.LOGGER.error("Could not start ChatCraft dashboard on port {}", port, exception);
+            scheduleStartRetry();
         }
     }
 
     public synchronized void stop() {
+        desiredRunning = false;
+        cancelStartRetry();
         HttpsServer active = server;
         server = null;
         if (active != null) active.stop(0);
@@ -105,6 +136,11 @@ public final class ChatCraftDashboardServer {
         executor = null;
         if (threads != null) threads.shutdownNow();
         detail = "Stopped";
+    }
+
+    public synchronized void close() {
+        stop();
+        supervisor.shutdownNow();
     }
 
     public boolean running() { return server != null; }
@@ -126,7 +162,29 @@ public final class ChatCraftDashboardServer {
         start();
     }
 
+    private synchronized void scheduleStartRetry() {
+        if (!desiredRunning || supervisor.isShutdown()
+                || (startRetry != null && !startRetry.isDone())) return;
+        long delay = Math.min(300, 5L << Math.min(startFailureCount++, 6));
+        detail = "Start failed; retrying in " + delay + "s";
+        activity.warn("Dashboard", detail);
+        startRetry = supervisor.schedule(() -> {
+            synchronized (ChatCraftDashboardServer.this) {
+                startRetry = null;
+                if (!desiredRunning || server != null) return;
+            }
+            start();
+        }, delay, TimeUnit.SECONDS);
+    }
+
+    private synchronized void cancelStartRetry() {
+        if (startRetry != null) startRetry.cancel(false);
+        startRetry = null;
+    }
+
     private void handle(HttpExchange exchange) throws IOException {
+        long requestNumber = requestCount.incrementAndGet();
+        String incident = Long.toString(requestNumber, 36) + "-" + randomHex(3);
         try {
             if (!allowedClient(exchange.getRemoteAddress().getAddress())) {
                 sendText(exchange, 403, "Forbidden", "text/plain; charset=utf-8");
@@ -158,10 +216,52 @@ public final class ChatCraftDashboardServer {
                 case "/api/diagnostics/clear" -> clearDiagnostics(exchange);
                 default -> sendText(exchange, 404, "Not found", "text/plain; charset=utf-8");
             }
+        } catch (BadRequestException exception) {
+            failedRequestCount.incrementAndGet();
+            activity.warn("Dashboard request", "Incident: " + incident + "\nMethod: " + exchange.getRequestMethod()
+                    + "\nPath: " + exchange.getRequestURI().getPath() + "\nClient: " + exchange.getRemoteAddress()
+                    + "\nReason: " + exception.getMessage());
+            if (exchange.getResponseCode() == -1) {
+                sendJson(exchange, exception.status, Map.of("error", exception.getMessage(), "incident", incident));
+            }
+        } catch (IOException exception) {
+            failedRequestCount.incrementAndGet();
+            if (exchange.getResponseCode() == -1) {
+                ChatCraftClient.LOGGER.warn("Dashboard I/O request {} failed", incident, exception);
+                activity.error("Dashboard I/O", "Incident: " + incident
+                        + "\nMethod: " + exchange.getRequestMethod()
+                        + "\nPath: " + exchange.getRequestURI().getPath()
+                        + "\nClient: " + exchange.getRemoteAddress(), exception);
+                try {
+                    sendJson(exchange, 500, Map.of(
+                            "error", "I/O failure; see Live diagnostics for incident " + incident,
+                            "incident", incident));
+                } catch (IOException responseException) {
+                    ChatCraftClient.LOGGER.debug("Could not send dashboard I/O error response {}", incident,
+                            responseException);
+                }
+            } else {
+                ChatCraftClient.LOGGER.debug("Dashboard client connection ended during request {}", incident,
+                        exception);
+            }
         } catch (Exception exception) {
-            ChatCraftClient.LOGGER.warn("Dashboard request failed: {}", exception.toString());
-            activity.error("Dashboard", exception.getClass().getSimpleName() + ": " + exception.getMessage());
-            if (exchange.getResponseCode() == -1) sendJson(exchange, 500, Map.of("error", "Request failed"));
+            failedRequestCount.incrementAndGet();
+            if (exception instanceof InterruptedException) Thread.currentThread().interrupt();
+            ChatCraftClient.LOGGER.warn("Dashboard request {} failed", incident, exception);
+            activity.error("Dashboard request", "Incident: " + incident
+                    + "\nMethod: " + exchange.getRequestMethod()
+                    + "\nPath: " + exchange.getRequestURI().getPath()
+                    + "\nClient: " + exchange.getRemoteAddress(), exception);
+            if (exchange.getResponseCode() == -1) {
+                try {
+                    sendJson(exchange, 500, Map.of(
+                            "error", "Request failed; see Live diagnostics for incident " + incident,
+                            "incident", incident));
+                } catch (IOException responseException) {
+                    ChatCraftClient.LOGGER.debug("Could not send dashboard error response {}", incident,
+                            responseException);
+                }
+            }
         } finally {
             exchange.close();
         }
@@ -204,6 +304,9 @@ public final class ChatCraftDashboardServer {
         payload.put("events", activity.snapshot());
         payload.put("diagnostics", activity.diagnosticSnapshot());
         payload.put("chat", ChatCraftClient.chatFeed().webMessages());
+        payload.put("dashboardUptimeMillis", Math.max(0, System.currentTimeMillis() - startedAt));
+        payload.put("dashboardRequests", requestCount.get());
+        payload.put("dashboardFailedRequests", failedRequestCount.get());
         sendJson(exchange, 200, payload);
     }
 
@@ -611,8 +714,12 @@ public final class ChatCraftDashboardServer {
 
     private static JsonObject readJson(HttpExchange exchange) throws IOException {
         byte[] bytes = exchange.getRequestBody().readNBytes(MAX_REQUEST_BYTES + 1);
-        if (bytes.length > MAX_REQUEST_BYTES) throw new IOException("Request body is too large");
-        return JsonParser.parseString(new String(bytes, StandardCharsets.UTF_8)).getAsJsonObject();
+        if (bytes.length > MAX_REQUEST_BYTES) throw new BadRequestException(413, "Request body is too large");
+        try {
+            return JsonParser.parseString(new String(bytes, StandardCharsets.UTF_8)).getAsJsonObject();
+        } catch (RuntimeException exception) {
+            throw new BadRequestException(400, "Request body must be a valid JSON object");
+        }
     }
 
     private static String string(JsonObject object, String key) {
@@ -723,4 +830,13 @@ public final class ChatCraftDashboardServer {
     }
 
     private record TokenDetails(String login, long expiresIn) { }
+
+    private static final class BadRequestException extends IOException {
+        private final int status;
+
+        private BadRequestException(int status, String message) {
+            super(message);
+            this.status = status;
+        }
+    }
 }

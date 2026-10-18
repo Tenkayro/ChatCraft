@@ -7,10 +7,13 @@ let lastEvents = [];
 let activeConsoleLevel = "all";
 let diagnostics = [];
 let settingsLoaded = false;
+let refreshRunning = false;
+let consecutiveRefreshFailures = 0;
 const recentDiagnostics = new Map();
 
 const stateLabels = {
   CONNECTED: "Connected",
+  WAITING: "Waiting",
   CONNECTING: "Connecting…",
   DISCONNECTED: "Disconnected",
   ERROR: "Error",
@@ -39,21 +42,35 @@ function reportDiagnostic(level, source, message) {
 
 async function api(path, options = {}) {
   const headers = { "X-ChatCraft-Session": session, ...(options.headers || {}) };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeout || 12000);
   if (options.method === "POST") {
     headers["Content-Type"] = "application/json";
   }
   try {
-    const response = await fetch(path, { ...options, headers, cache: "no-store" });
-    const data = await response.json();
+    const response = await fetch(path, { ...options, headers, signal: controller.signal, cache: "no-store" });
+    const body = await response.text();
+    let data;
+    try {
+      data = body ? JSON.parse(body) : {};
+    } catch {
+      throw new Error(`Invalid response from ${path} (HTTP ${response.status})`);
+    }
     if (!response.ok) {
-      const message = data.error || `Request failed (${response.status})`;
+      const incident = data.incident ? ` · incident ${data.incident}` : "";
+      const message = `${data.error || "Request failed"} (HTTP ${response.status}${incident})`;
       if (!path.startsWith("/api/diagnostics")) reportDiagnostic("error", `API ${path}`, message);
       throw new Error(message);
     }
     return data;
   } catch (error) {
-    if (!path.startsWith("/api/diagnostics")) reportDiagnostic("error", `API ${path}`, error.message);
-    throw error;
+    const message = error.name === "AbortError"
+      ? `Request timed out after ${options.timeout || 12000} ms`
+      : error.message;
+    if (!path.startsWith("/api/diagnostics")) reportDiagnostic("error", `API ${path}`, message);
+    throw new Error(message, { cause: error });
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -244,15 +261,39 @@ function renderConsole() {
     source.textContent = item.source || "ChatCraft";
     const message = document.createElement("span");
     message.className = "console-message";
-    message.textContent = item.message || "—";
+    const diagnosticMessage = item.message || "—";
+    if (diagnosticMessage.includes("\n")) {
+      const [summary, ...detailLines] = diagnosticMessage.split("\n");
+      const details = document.createElement("details");
+      details.className = "console-details";
+      const heading = document.createElement("summary");
+      heading.textContent = summary;
+      const detail = document.createElement("pre");
+      detail.textContent = detailLines.join("\n");
+      details.append(heading, detail);
+      message.append(details);
+    } else {
+      message.textContent = diagnosticMessage;
+    }
     line.append(time, level, source, message);
     body.append(line);
   }
 }
 
 async function refresh() {
-  try { renderStatus(await api("/api/status")); }
-  catch (error) { $("connectionDetail").textContent = error.message; }
+  if (refreshRunning) return;
+  refreshRunning = true;
+  try {
+    renderStatus(await api("/api/status", { timeout: 8000 }));
+    consecutiveRefreshFailures = 0;
+  } catch (error) {
+    consecutiveRefreshFailures++;
+    $("connectionDetail").textContent = `Dashboard API unavailable: ${error.message}`;
+    $("connectionBadge").textContent = `Reconnecting (${consecutiveRefreshFailures})`;
+    $("connectionBadge").className = "badge error";
+  } finally {
+    refreshRunning = false;
+  }
 }
 
 function fillCredentials(credentials) {
@@ -565,10 +606,13 @@ for (const button of document.querySelectorAll(".event-test")) {
 }
 
 window.addEventListener("error", (event) => {
-  reportDiagnostic("error", "Web panel", `${event.message} (${event.filename || "inline"}:${event.lineno || 0})`);
+  const stack = event.error?.stack ? `\n${event.error.stack}` : "";
+  reportDiagnostic("error", "Web panel", `${event.message} (${event.filename || "inline"}:${event.lineno || 0})${stack}`);
 });
 window.addEventListener("unhandledrejection", (event) => {
-  const reason = event.reason instanceof Error ? event.reason.message : String(event.reason);
+  const reason = event.reason instanceof Error
+    ? `${event.reason.message}${event.reason.stack ? `\n${event.reason.stack}` : ""}`
+    : String(event.reason);
   reportDiagnostic("error", "Web panel promise", reason);
 });
 
@@ -583,5 +627,8 @@ async function initialize() {
   await refresh();
 }
 
-initialize();
-setInterval(refresh, 1500);
+async function refreshLoop() {
+  await refresh();
+  setTimeout(refreshLoop, document.hidden ? 5000 : 1500);
+}
+initialize().finally(() => setTimeout(refreshLoop, 1500));

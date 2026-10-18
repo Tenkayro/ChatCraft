@@ -110,6 +110,7 @@ public final class CommandParser {
             case "Q", "DROP" -> new ChatAction(ChatAction.Type.DROP);
             case "ATTACK", "HIT" -> new ChatAction(ChatAction.Type.ATTACK);
             case "USE", "INTERACT" -> new ChatAction(ChatAction.Type.USE);
+            case "EAT", "DRINK", "CONSUME" -> new ChatAction(ChatAction.Type.CONSUME);
             case "BREAK", "MINE" -> new ChatAction(ChatAction.Type.BREAK);
             case "PLACE", "BUILD" -> new ChatAction(ChatAction.Type.PLACE);
             case "RECIPEBOOK", "RECIPES", "BOOK" -> new ChatAction(ChatAction.Type.RECIPE_BOOK);

@@ -69,7 +69,7 @@ public final class ChatCraftClient implements ClientModInitializer {
             youtube.close();
             chatFeed.close();
             input.releaseAll();
-            dashboard.stop();
+            dashboard.close();
         });
         ChatCraftCommands.register();
         if (config.autoConnect) {

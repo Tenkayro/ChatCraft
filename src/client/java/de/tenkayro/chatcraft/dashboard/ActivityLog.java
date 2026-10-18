@@ -5,10 +5,18 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public final class ActivityLog {
     private static final int MAX_EVENTS = 300;
     private static final int MAX_DIAGNOSTICS = 300;
+    private static final int MAX_DIAGNOSTIC_LENGTH = 6_000;
+    private static final Pattern AUTHORIZATION = Pattern.compile(
+            "(?i)(authorization\\s*[:=]\\s*(?:bearer|oauth)\\s+)[^\\s]+"
+    );
+    private static final Pattern SECRET_VALUE = Pattern.compile(
+            "(?i)((?:access|refresh|oauth)[_-]?token|client[_-]?secret)(\\s*[:=]\\s*)[^\\s,;&]+"
+    );
     private final Deque<Event> events = new ArrayDeque<>();
     private final Deque<Diagnostic> diagnostics = new ArrayDeque<>();
     private long nextId;
@@ -24,6 +32,12 @@ public final class ActivityLog {
     public synchronized void info(String source, String message) { diagnostic("info", source, message); }
     public synchronized void warn(String source, String message) { diagnostic("warning", source, message); }
     public synchronized void error(String source, String message) { diagnostic("error", source, message); }
+    public synchronized void warn(String source, String message, Throwable cause) {
+        diagnostic("warning", source, withException(message, cause));
+    }
+    public synchronized void error(String source, String message, Throwable cause) {
+        diagnostic("error", source, withException(message, cause));
+    }
 
     public synchronized List<Diagnostic> diagnosticSnapshot() {
         List<Diagnostic> copy = new ArrayList<>(diagnostics.size());
@@ -68,8 +82,38 @@ public final class ActivityLog {
 
     private void diagnostic(String level, String source, String message) {
         diagnostics.addLast(new Diagnostic(++nextDiagnosticId, System.currentTimeMillis(), clean(level, 12),
-                clean(source, 80), clean(message, 600)));
+                clean(source, 80), cleanDiagnostic(message)));
         while (diagnostics.size() > MAX_DIAGNOSTICS) diagnostics.removeFirst();
+    }
+
+    private static String withException(String message, Throwable cause) {
+        StringBuilder detail = new StringBuilder(message == null ? "" : message);
+        Throwable current = cause;
+        int causeDepth = 0;
+        while (current != null && causeDepth++ < 6) {
+            if (!detail.isEmpty()) detail.append('\n');
+            detail.append(causeDepth == 1 ? "Exception: " : "Caused by: ")
+                    .append(current.getClass().getName());
+            if (current.getMessage() != null && !current.getMessage().isBlank()) {
+                detail.append(": ").append(current.getMessage());
+            }
+            StackTraceElement[] trace = current.getStackTrace();
+            for (int index = 0; index < Math.min(trace.length, 16); index++) {
+                detail.append("\n  at ").append(trace[index]);
+            }
+            current = current.getCause();
+        }
+        return detail.toString();
+    }
+
+    private static String cleanDiagnostic(String value) {
+        if (value == null) return "";
+        String cleaned = value.replace("\r\n", "\n").replace('\r', '\n')
+                .replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]", "");
+        cleaned = AUTHORIZATION.matcher(cleaned).replaceAll("$1[REDACTED]");
+        cleaned = SECRET_VALUE.matcher(cleaned).replaceAll("$1$2[REDACTED]");
+        return cleaned.length() <= MAX_DIAGNOSTIC_LENGTH
+                ? cleaned : cleaned.substring(0, MAX_DIAGNOSTIC_LENGTH) + "\n… truncated";
     }
 
     public record Event(long id, long timestamp, String category, String user, String message, String action,
