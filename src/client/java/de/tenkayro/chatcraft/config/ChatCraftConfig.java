@@ -53,6 +53,10 @@ public final class ChatCraftConfig {
     public boolean statsPlayerKills = false;
     public boolean statsDistance = false;
     public boolean statsJumps = false;
+    public boolean statsTwitchFollowers = false;
+    public boolean statsTwitchViewers = false;
+    public boolean statsYoutubeSubscribers = false;
+    public boolean statsYoutubeViewers = false;
     public List<String> whitelist = new ArrayList<>();
     public List<String> blacklist = new ArrayList<>();
 

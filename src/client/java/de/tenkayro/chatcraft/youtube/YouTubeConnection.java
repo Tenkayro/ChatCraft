@@ -57,6 +57,7 @@ public final class YouTubeConnection {
     private volatile ScheduledFuture<?> task;
     private long generation;
     private volatile String liveChatId = "";
+    private volatile String activeBroadcastId = "";
     private volatile String pageToken = "";
     private final ArrayDeque<String> recentMessageOrder = new ArrayDeque<>();
     private final Set<String> recentMessageIds = new HashSet<>();
@@ -97,6 +98,7 @@ public final class YouTubeConnection {
         if (task != null) task.cancel(true);
         task = null;
         liveChatId = "";
+        activeBroadcastId = "";
         pageToken = "";
         clearRecentMessages();
         firstPage = true;
@@ -115,6 +117,13 @@ public final class YouTubeConnection {
 
     public State state() { return state; }
     public String detail() { return detail; }
+    public String activeBroadcastId() { return activeBroadcastId; }
+
+    /** Returns a valid OAuth token for other low-frequency YouTube read requests. */
+    public synchronized String accessTokenForApi() throws Exception {
+        ensureAccessToken();
+        return ChatCraftConfig.get().youtubeAccessToken;
+    }
 
     private void discoverAndPoll(long session) {
         if (!isCurrent(session)) return;
@@ -152,6 +161,7 @@ public final class YouTubeConnection {
                 "Discover active broadcast");
         JsonArray items = json.getAsJsonArray("items");
         boolean liveBroadcastFound = false;
+        activeBroadcastId = "";
         if (items != null) {
             for (var element : items) {
                 JsonObject broadcast = element.getAsJsonObject();
@@ -159,6 +169,7 @@ public final class YouTubeConnection {
                 if (!"live".equals(string(status, "lifeCycleStatus"))) continue;
 
                 liveBroadcastFound = true;
+                activeBroadcastId = string(broadcast, "id");
                 JsonObject snippet = broadcast.getAsJsonObject("snippet");
                 if (snippet != null && snippet.has("liveChatId")) {
                     liveChatId = snippet.get("liveChatId").getAsString();
@@ -253,7 +264,7 @@ public final class YouTubeConnection {
         }
     }
 
-    private void ensureAccessToken() throws Exception {
+    private synchronized void ensureAccessToken() throws Exception {
         ChatCraftConfig config = ChatCraftConfig.get();
         if (!config.youtubeAccessToken.isBlank()
                 && System.currentTimeMillis() < config.youtubeAccessTokenExpiresAt - 60_000) return;
@@ -327,6 +338,7 @@ public final class YouTubeConnection {
 
         if (exception.isChatUnavailable()) {
             liveChatId = "";
+            activeBroadcastId = "";
             pageToken = "";
             clearRecentMessages();
             firstPage = true;

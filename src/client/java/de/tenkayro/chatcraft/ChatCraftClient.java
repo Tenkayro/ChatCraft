@@ -14,6 +14,7 @@ import de.tenkayro.chatcraft.input.BackgroundModeController;
 import de.tenkayro.chatcraft.identity.ClientIdentity;
 import de.tenkayro.chatcraft.overlay.ScreenOverlayRenderer;
 import de.tenkayro.chatcraft.overlay.StatsOverlayRenderer;
+import de.tenkayro.chatcraft.stats.PlatformStatsService;
 import de.tenkayro.chatcraft.twitch.TwitchConnection;
 import de.tenkayro.chatcraft.twitch.TwitchEventSub;
 import de.tenkayro.chatcraft.twitch.TwitchChatFeed;
@@ -44,11 +45,13 @@ public final class ChatCraftClient implements ClientModInitializer {
     private static ActivityLog activity;
     private static ChatCraftDashboardServer dashboard;
     private static ClientIdentity identity;
+    private static PlatformStatsService platformStats;
 
     @Override
     public void onInitializeClient() {
         ChatCraftConfig config = ChatCraftConfig.get();
         activity = new ActivityLog();
+        platformStats = new PlatformStatsService(activity);
         queue = new ActionQueue();
         CommandParser parser = new CommandParser();
         commands = new CommandService(parser, queue, activity);
@@ -68,6 +71,7 @@ public final class ChatCraftClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(backgroundMode::tick);
         ClientTickEvents.END_CLIENT_TICK.register(identity::tick);
         ClientTickEvents.END_CLIENT_TICK.register(ChatCraftCommands::tick);
+        ClientTickEvents.END_CLIENT_TICK.register(platformStats::tick);
         ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> identity.rewriteLocalName(message));
         ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signedMessage, sender, params, timestamp) -> {
             if (sender == null || !identity.isLocalProfile(sender)) return true;
@@ -84,6 +88,7 @@ public final class ChatCraftClient implements ClientModInitializer {
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             CustomCursor.destroy(client);
             twitch.disconnect();
+            platformStats.close();
             youtube.close();
             chatFeed.close();
             input.releaseAll();
@@ -107,6 +112,7 @@ public final class ChatCraftClient implements ClientModInitializer {
     public static ActivityLog activity() { return activity; }
     public static ChatCraftDashboardServer dashboard() { return dashboard; }
     public static ClientIdentity identity() { return identity; }
+    public static PlatformStatsService platformStats() { return platformStats; }
 
     public static Text dashboardMessage() {
         if (!dashboard.running()) return Text.literal("ChatCraft dashboard: " + dashboard.detail())

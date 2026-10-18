@@ -1,11 +1,14 @@
 package de.tenkayro.chatcraft.overlay;
 
+import de.tenkayro.chatcraft.ChatCraftClient;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
+import de.tenkayro.chatcraft.stats.PlatformStatsService;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.stat.Stats;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -21,6 +24,9 @@ public final class StatsOverlayRenderer {
     private static final int BACKGROUND = 0xB814171C;
     private static final int LABEL_COLOR = 0xFF9DA3AE;
     private static final int VALUE_COLOR = 0xFFF4F5F7;
+    private static final Identifier PLATFORM_ICONS_FONT = Identifier.of("chatcraft", "platform_icons");
+    private static final String TWITCH_ICON = "\uE000";
+    private static final String YOUTUBE_ICON = "\uE001";
 
     private StatsOverlayRenderer() { }
 
@@ -62,22 +68,44 @@ public final class StatsOverlayRenderer {
     }
 
     private static List<StatRow> collectRows(ClientPlayerEntity player, ChatCraftConfig config) {
-        List<StatRow> rows = new ArrayList<>(6);
+        List<StatRow> rows = new ArrayList<>(10);
         if (config.statsDeaths) rows.add(row(player, "Deaths", Stats.DEATHS));
         if (config.statsPlaytime) {
-            rows.add(new StatRow("Playtime", formatPlaytime(value(player, Stats.PLAY_TIME))));
+            rows.add(new StatRow(Text.literal("Playtime"), formatPlaytime(value(player, Stats.PLAY_TIME))));
         }
         if (config.statsMobKills) rows.add(row(player, "Mob kills", Stats.MOB_KILLS));
         if (config.statsPlayerKills) rows.add(row(player, "Player kills", Stats.PLAYER_KILLS));
         if (config.statsDistance) {
-            rows.add(new StatRow("Walked", formatDistance(value(player, Stats.WALK_ONE_CM))));
+            rows.add(new StatRow(Text.literal("Walked"), formatDistance(value(player, Stats.WALK_ONE_CM))));
         }
         if (config.statsJumps) rows.add(row(player, "Jumps", Stats.JUMP));
+        PlatformStatsService platformStats = ChatCraftClient.platformStats();
+        if (config.statsTwitchFollowers) {
+            rows.add(new StatRow(platformLabel(TWITCH_ICON, "Followers", 0x9146FF),
+                    formatCount(platformStats.twitchFollowers())));
+        }
+        if (config.statsTwitchViewers) {
+            rows.add(new StatRow(platformLabel(TWITCH_ICON, "Viewers", 0x9146FF),
+                    formatCount(platformStats.twitchViewers())));
+        }
+        if (config.statsYoutubeSubscribers) {
+            rows.add(new StatRow(platformLabel(YOUTUBE_ICON, "Subscribers", 0xFF0000),
+                    formatCount(platformStats.youtubeSubscribers())));
+        }
+        if (config.statsYoutubeViewers) {
+            rows.add(new StatRow(platformLabel(YOUTUBE_ICON, "Viewers", 0xFF0000),
+                    formatCount(platformStats.youtubeViewers())));
+        }
         return rows;
     }
 
     private static StatRow row(ClientPlayerEntity player, String label, Identifier statistic) {
-        return new StatRow(label, Integer.toString(value(player, statistic)));
+        return new StatRow(Text.literal(label), Integer.toString(value(player, statistic)));
+    }
+
+    private static Text platformLabel(String icon, String label, int color) {
+        MutableText text = Text.literal(icon).styled(style -> style.withFont(PLATFORM_ICONS_FONT).withColor(color));
+        return text.append(Text.literal(" " + label).styled(style -> style.withColor(LABEL_COLOR & 0xFFFFFF)));
     }
 
     private static int value(ClientPlayerEntity player, Identifier statistic) {
@@ -98,5 +126,12 @@ public final class StatsOverlayRenderer {
         return String.format(Locale.ROOT, "%.0f m", centimeters / 100.0);
     }
 
-    private record StatRow(String label, String value) { }
+    private static String formatCount(Long value) {
+        if (value == null) return "—";
+        if (value >= 1_000_000) return String.format(Locale.ROOT, "%.1fM", value / 1_000_000.0);
+        if (value >= 10_000) return String.format(Locale.ROOT, "%.1fK", value / 1_000.0);
+        return Long.toString(value);
+    }
+
+    private record StatRow(Text label, String value) { }
 }

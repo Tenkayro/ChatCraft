@@ -48,6 +48,13 @@ public final class ChatCraftCommands {
                     .then(statsToggle("playerkills"))
                     .then(statsToggle("distance"))
                     .then(statsToggle("jumps"))
+                    .then(ClientCommandManager.literal("twitch")
+                        .then(platformStatsToggle("twitch", "followers"))
+                        .then(platformStatsToggle("twitch", "viewers")))
+                    .then(ClientCommandManager.literal("youtube")
+                        .then(platformStatsToggle("youtube", "subscribers"))
+                        .then(platformStatsToggle("youtube", "followers"))
+                        .then(platformStatsToggle("youtube", "viewers")))
                     .then(statsToggle("all")))
                 .then(ClientCommandManager.literal("dashboard").executes(context -> {
                     context.getSource().sendFeedback(ChatCraftClient.dashboardMessage());
@@ -287,6 +294,10 @@ public final class ChatCraftCommands {
                 config.statsPlayerKills = visible;
                 config.statsDistance = visible;
                 config.statsJumps = visible;
+                config.statsTwitchFollowers = visible;
+                config.statsTwitchViewers = visible;
+                config.statsYoutubeSubscribers = visible;
+                config.statsYoutubeViewers = visible;
             }
             default -> {
                 error(source, "Unknown statistic: " + stat);
@@ -294,8 +305,36 @@ public final class ChatCraftCommands {
             }
         }
         config.save();
+        ChatCraftClient.platformStats().requestRefresh();
         success(source, ("all".equals(stat) ? "Stats" : statLabel(stat))
                 + (visible ? " shown" : " hidden"));
+        return 1;
+    }
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<FabricClientCommandSource> platformStatsToggle(
+            String platform, String metric) {
+        return ClientCommandManager.literal(metric)
+                .then(ClientCommandManager.argument("visible", BoolArgumentType.bool())
+                        .executes(context -> setPlatformStatVisible(context.getSource(), platform, metric,
+                                BoolArgumentType.getBool(context, "visible"))));
+    }
+
+    private static int setPlatformStatVisible(FabricClientCommandSource source, String platform,
+                                              String metric, boolean visible) {
+        ChatCraftConfig config = ChatCraftConfig.get();
+        if ("twitch".equals(platform) && "followers".equals(metric)) config.statsTwitchFollowers = visible;
+        else if ("twitch".equals(platform) && "viewers".equals(metric)) config.statsTwitchViewers = visible;
+        else if ("youtube".equals(platform) && ("subscribers".equals(metric) || "followers".equals(metric))) {
+            config.statsYoutubeSubscribers = visible;
+        } else if ("youtube".equals(platform) && "viewers".equals(metric)) config.statsYoutubeViewers = visible;
+        else {
+            error(source, "Unknown platform statistic");
+            return 0;
+        }
+        config.save();
+        ChatCraftClient.platformStats().requestRefresh();
+        String label = "youtube".equals(platform) && "followers".equals(metric) ? "subscribers" : metric;
+        success(source, statLabel(platform) + " " + statLabel(label) + (visible ? " shown" : " hidden"));
         return 1;
     }
 
@@ -308,7 +347,13 @@ public final class ChatCraftCommands {
                 .append(toggleLine("Player kills", config.statsPlayerKills))
                 .append(toggleLine("Distance", config.statsDistance))
                 .append(toggleLine("Jumps", config.statsJumps))
-                .append(Text.literal("/cc stats <stat|all> <true|false>").formatted(Formatting.DARK_AQUA));
+                .append(toggleLine("Twitch followers", config.statsTwitchFollowers))
+                .append(toggleLine("Twitch viewers", config.statsTwitchViewers))
+                .append(toggleLine("YouTube subscribers", config.statsYoutubeSubscribers))
+                .append(toggleLine("YouTube viewers", config.statsYoutubeViewers))
+                .append(Text.literal("/cc stats <stat|all> <true|false>\n").formatted(Formatting.DARK_AQUA))
+                .append(Text.literal("/cc stats twitch|youtube <metric> <true|false>")
+                        .formatted(Formatting.DARK_AQUA));
         source.sendFeedback(status);
         return 1;
     }
