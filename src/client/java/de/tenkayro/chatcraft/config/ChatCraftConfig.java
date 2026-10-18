@@ -47,6 +47,12 @@ public final class ChatCraftConfig {
     public float cameraStepDegrees = 30.0f;
     public String clientNickname = "";
     public String clientSkinUsername = "";
+    public boolean statsDeaths = false;
+    public boolean statsPlaytime = false;
+    public boolean statsMobKills = false;
+    public boolean statsPlayerKills = false;
+    public boolean statsDistance = false;
+    public boolean statsJumps = false;
     public List<String> whitelist = new ArrayList<>();
     public List<String> blacklist = new ArrayList<>();
 

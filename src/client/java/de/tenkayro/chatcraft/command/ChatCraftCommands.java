@@ -1,5 +1,6 @@
 package de.tenkayro.chatcraft.command;
 
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import de.tenkayro.chatcraft.ChatCraftClient;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
@@ -39,6 +40,15 @@ public final class ChatCraftCommands {
                         .executes(context -> disconnect(context.getSource(), "youtube"))))
                 .then(ClientCommandManager.literal("status")
                     .executes(context -> showStatus(context.getSource())))
+                .then(ClientCommandManager.literal("stats")
+                    .executes(context -> showStats(context.getSource()))
+                    .then(statsToggle("deaths"))
+                    .then(statsToggle("playtime"))
+                    .then(statsToggle("mobkills"))
+                    .then(statsToggle("playerkills"))
+                    .then(statsToggle("distance"))
+                    .then(statsToggle("jumps"))
+                    .then(statsToggle("all")))
                 .then(ClientCommandManager.literal("dashboard").executes(context -> {
                     context.getSource().sendFeedback(ChatCraftClient.dashboardMessage());
                     return ChatCraftClient.dashboard().running() ? 1 : 0;
@@ -228,6 +238,8 @@ public final class ChatCraftCommands {
                 .append(Text.literal("  Toggle chat control\n").formatted(Formatting.GRAY))
                 .append(Text.literal("/cc overlay on|off").formatted(Formatting.AQUA))
                 .append(Text.literal("  Toggle labels\n").formatted(Formatting.GRAY))
+                .append(Text.literal("/cc stats").formatted(Formatting.AQUA))
+                .append(Text.literal("  Configure world stats\n").formatted(Formatting.GRAY))
                 .append(Text.literal("/cc nick …  /cc skin …  /cc queue clear").formatted(Formatting.DARK_AQUA));
         source.sendFeedback(help);
         return 1;
@@ -249,6 +261,72 @@ public final class ChatCraftCommands {
                 .append(Text.literal("  •  Queue: " + ChatCraftClient.queue().size()).formatted(Formatting.GRAY));
         source.sendFeedback(status);
         return 1;
+    }
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<FabricClientCommandSource> statsToggle(
+            String stat) {
+        return ClientCommandManager.literal(stat)
+                .then(ClientCommandManager.argument("visible", BoolArgumentType.bool())
+                        .executes(context -> setStatVisible(context.getSource(), stat,
+                                BoolArgumentType.getBool(context, "visible"))));
+    }
+
+    private static int setStatVisible(FabricClientCommandSource source, String stat, boolean visible) {
+        ChatCraftConfig config = ChatCraftConfig.get();
+        switch (stat) {
+            case "deaths" -> config.statsDeaths = visible;
+            case "playtime" -> config.statsPlaytime = visible;
+            case "mobkills" -> config.statsMobKills = visible;
+            case "playerkills" -> config.statsPlayerKills = visible;
+            case "distance" -> config.statsDistance = visible;
+            case "jumps" -> config.statsJumps = visible;
+            case "all" -> {
+                config.statsDeaths = visible;
+                config.statsPlaytime = visible;
+                config.statsMobKills = visible;
+                config.statsPlayerKills = visible;
+                config.statsDistance = visible;
+                config.statsJumps = visible;
+            }
+            default -> {
+                error(source, "Unknown statistic: " + stat);
+                return 0;
+            }
+        }
+        config.save();
+        success(source, ("all".equals(stat) ? "Stats" : statLabel(stat))
+                + (visible ? " shown" : " hidden"));
+        return 1;
+    }
+
+    private static int showStats(FabricClientCommandSource source) {
+        ChatCraftConfig config = ChatCraftConfig.get();
+        MutableText status = prefix().append(Text.literal("Stats overlay\n").formatted(Formatting.WHITE, Formatting.BOLD))
+                .append(toggleLine("Deaths", config.statsDeaths))
+                .append(toggleLine("Playtime", config.statsPlaytime))
+                .append(toggleLine("Mob kills", config.statsMobKills))
+                .append(toggleLine("Player kills", config.statsPlayerKills))
+                .append(toggleLine("Distance", config.statsDistance))
+                .append(toggleLine("Jumps", config.statsJumps))
+                .append(Text.literal("/cc stats <stat|all> <true|false>").formatted(Formatting.DARK_AQUA));
+        source.sendFeedback(status);
+        return 1;
+    }
+
+    private static MutableText toggleLine(String label, boolean enabled) {
+        return Text.literal(label + ": ").formatted(Formatting.GRAY)
+                .append(Text.literal(enabled ? "ON" : "OFF")
+                        .formatted(enabled ? Formatting.GREEN : Formatting.DARK_GRAY))
+                .append(Text.literal("\n"));
+    }
+
+    private static String statLabel(String stat) {
+        return switch (stat) {
+            case "playtime" -> "Playtime";
+            case "mobkills" -> "Mob kills";
+            case "playerkills" -> "Player kills";
+            default -> Character.toUpperCase(stat.charAt(0)) + stat.substring(1);
+        };
     }
 
     private static MutableText statusLine(String platform, String detail, boolean connected) {
