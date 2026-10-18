@@ -70,7 +70,8 @@ public final class TwitchChatFeed {
 
     private Text format(String user, String message, int color, String source) {
         String icon = source.equals("YouTube") ? YOUTUBE_ICON : TWITCH_ICON;
-        MutableText line = Text.literal(icon).styled(style -> style.withFont(PLATFORM_ICONS_FONT));
+        MutableText line = Text.empty();
+        line.append(Text.literal(icon).styled(style -> style.withFont(PLATFORM_ICONS_FONT)));
         line.append(Text.literal(" "));
         line.append(Text.literal(user).styled(style -> style.withColor(color)));
         line.append(Text.literal(" \u00BB ").formatted(Formatting.DARK_GRAY));

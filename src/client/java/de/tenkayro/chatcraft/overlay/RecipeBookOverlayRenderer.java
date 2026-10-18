@@ -6,8 +6,8 @@ import de.tenkayro.chatcraft.mixin.RecipeBookResultsAccessor;
 import de.tenkayro.chatcraft.mixin.RecipeBookWidgetAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.gui.screen.recipebook.AnimatedResultButton;
+import net.minecraft.client.gui.screen.recipebook.RecipeBookProvider;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookResults;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.screen.recipebook.RecipeAlternativesWidget;
@@ -21,9 +21,9 @@ public final class RecipeBookOverlayRenderer {
 
     private RecipeBookOverlayRenderer() { }
 
-    public static void render(InventoryScreen screen, DrawContext context) {
+    public static void render(RecipeBookProvider provider, DrawContext context) {
         if (!ChatCraftConfig.get().overlayEnabled) return;
-        RecipeBookWidget book = screen.getRecipeBookWidget();
+        RecipeBookWidget book = provider.getRecipeBookWidget();
         if (!book.isOpen()) return;
         RecipeBookResults area = ((RecipeBookWidgetAccessor) book).chatcraft$getRecipesArea();
         List<AnimatedResultButton> buttons = ((RecipeBookResultsAccessor) area).chatcraft$getResultButtons();

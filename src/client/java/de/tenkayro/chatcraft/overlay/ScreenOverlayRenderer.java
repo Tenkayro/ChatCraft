@@ -9,7 +9,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.GameMenuScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
+import net.minecraft.client.gui.screen.recipebook.RecipeBookProvider;
 import net.minecraft.client.gui.widget.ClickableWidget;
 
 public final class ScreenOverlayRenderer {
@@ -27,7 +27,7 @@ public final class ScreenOverlayRenderer {
         MinecraftMouseController.update();
         if (!ChatCraftConfig.get().overlayEnabled || screen instanceof GameMenuScreen) return;
         if (screen instanceof HandledScreen<?> handled) SlotOverlayRenderer.render(handled, context);
-        if (screen instanceof InventoryScreen inventory) RecipeBookOverlayRenderer.render(inventory, context);
+        if (screen instanceof RecipeBookProvider provider) RecipeBookOverlayRenderer.render(provider, context);
         renderButtons(screen, context);
     }
 

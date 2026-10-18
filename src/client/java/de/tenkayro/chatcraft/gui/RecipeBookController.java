@@ -6,6 +6,7 @@ import de.tenkayro.chatcraft.mixin.RecipeAlternativesWidgetAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.gui.screen.recipebook.AnimatedResultButton;
+import net.minecraft.client.gui.screen.recipebook.RecipeBookProvider;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookResults;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.screen.recipebook.RecipeAlternativesWidget;
@@ -17,11 +18,11 @@ import java.util.List;
 public final class RecipeBookController {
     public String toggle(MinecraftClient client) {
         if (client.player == null) return "skipped: no player";
-        boolean openedInventory = !(client.currentScreen instanceof InventoryScreen);
-        InventoryScreen screen = inventoryScreen(client);
-        if (screen == null) return "skipped: inventory is not ready";
-        RecipeBookWidget book = screen.getRecipeBookWidget();
-        if (openedInventory) {
+        boolean openedFallbackInventory = !(client.currentScreen instanceof RecipeBookProvider);
+        RecipeBookProvider provider = recipeBookProvider(client);
+        if (provider == null) return "skipped: recipe book is not ready";
+        RecipeBookWidget book = provider.getRecipeBookWidget();
+        if (openedFallbackInventory) {
             if (!book.isOpen()) book.toggleOpen();
         } else {
             book.toggleOpen();
@@ -96,19 +97,18 @@ public final class RecipeBookController {
 
     private static RecipeBookWidget openBook(MinecraftClient client) {
         if (client.player == null) return null;
-        InventoryScreen screen = inventoryScreen(client);
-        if (screen == null) return null;
-        RecipeBookWidget book = screen.getRecipeBookWidget();
+        RecipeBookProvider provider = recipeBookProvider(client);
+        if (provider == null) return null;
+        RecipeBookWidget book = provider.getRecipeBookWidget();
         if (!book.isOpen()) book.toggleOpen();
         return book;
     }
 
-    private static InventoryScreen inventoryScreen(MinecraftClient client) {
-        if (!(client.currentScreen instanceof InventoryScreen)) {
-            if (client.player == null) return null;
-            client.setScreen(new InventoryScreen(client.player));
-        }
-        return client.currentScreen instanceof InventoryScreen screen ? screen : null;
+    private static RecipeBookProvider recipeBookProvider(MinecraftClient client) {
+        if (client.currentScreen instanceof RecipeBookProvider provider) return provider;
+        if (client.player == null) return null;
+        client.setScreen(new InventoryScreen(client.player));
+        return client.currentScreen instanceof RecipeBookProvider provider ? provider : null;
     }
 
     private static RecipeBookResultsAccessor results(RecipeBookWidget book) {
