@@ -5,130 +5,180 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="chatcraft-session" content="__CHATCRAFT_SESSION__">
   <title>ChatCraft</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <main>
-    <header>
-      <div><h1>ChatCraft</h1><p class="subtitle">Minecraft × Twitch + YouTube</p></div>
-      <div id="connectionBadge" class="badge neutral">Loading...</div>
-    </header>
-    <section class="stats" aria-label="Status">
-      <article><span>Twitch</span><strong id="connectionText">Loading...</strong></article>
-      <article><span>YouTube</span><strong id="youtubeConnectionText">Loading...</strong></article>
-      <article><span>Queue</span><strong id="queueText">0</strong></article>
-      <article><span>Twitch user</span><strong id="usernameText">Not configured</strong></article>
-      <article><span>Controls</span><strong id="controlsText">-</strong></article>
-    </section>
-    <section class="panel lan-panel">
-      <div class="panel-heading"><div><h2>LAN access</h2><p class="muted small">Use the panel from another device on your network.</p></div></div>
-      <div class="copy-row"><code id="lanUrl">Detecting...</code><button id="copyLan" class="secondary">Copy</button></div>
-      <p class="muted small">Keep Minecraft open. Accept the local certificate once on the other device.</p>
-    </section>
-    <section class="grid">
-      <article class="panel setup-panel">
-        <div class="panel-heading"><h2>Twitch setup</h2></div>
-        <p class="step"><strong>01</strong> · <a href="https://dev.twitch.tv/console/apps/create" target="_blank" rel="noreferrer">Create a Twitch application</a> as Public / Chat Bot.</p>
-        <p class="step"><strong>02</strong> · Add this exact redirect URL.</p>
-        <div class="copy-row"><code id="redirectUrl">Loading...</code><button id="copyRedirect" class="secondary">Copy</button></div>
-        <form id="oauthForm">
-          <label for="clientId">03 · Client ID</label>
-          <div class="input-row"><input id="clientId" autocomplete="off" spellcheck="false" placeholder="Client ID" required><button type="submit">Authorize</button></div>
-        </form>
-        <p id="oauthMessage" class="message" role="status"></p>
-        <div class="token-status-row"><span>Token</span><strong id="tokenStatus">Checking...</strong><button id="clearToken" class="secondary danger">Clear</button></div>
-        <div id="tokenResult" class="token-result" hidden>
-          <label>Access token</label><code id="tokenValue"></code>
-          <div class="button-row"><button id="copyToken" class="secondary">Copy</button><button id="saveToken">Save securely</button></div>
-          <p class="warning">Keep this token private.</p>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#overview" aria-label="ChatCraft home">
+        <span class="brand-mark"><i class="fa-solid fa-cube"></i></span>
+        <span><strong>ChatCraft</strong><small>Control Center</small></span>
+      </a>
+      <nav aria-label="Sections">
+        <a href="#overview"><i class="fa-solid fa-house"></i><span>Overview</span></a>
+        <a href="#connections"><i class="fa-solid fa-tower-broadcast"></i><span>Chats</span></a>
+        <a href="#settings"><i class="fa-solid fa-sliders"></i><span>Settings</span></a>
+        <a href="#tools"><i class="fa-solid fa-toolbox"></i><span>Tools</span></a>
+        <a href="#activity"><i class="fa-solid fa-list-ul"></i><span>Activity</span></a>
+      </nav>
+      <div class="sidebar-foot"><span class="pulse"></span> Minecraft is running</div>
+    </aside>
+
+    <main>
+      <header id="overview" class="topbar">
+        <div><p class="eyebrow">Dashboard</p><h1>Everything at a glance.</h1><p class="subtitle">Twitch and YouTube control your Minecraft world together.</p></div>
+        <div id="connectionBadge" class="badge neutral">Loading status</div>
+      </header>
+
+      <section class="quick-stats" aria-label="Status overview">
+        <article><span class="stat-icon"><i class="fa-solid fa-layer-group"></i></span><div><small>Queue</small><strong id="queueText">0</strong></div></article>
+        <article><span class="stat-icon"><i class="fa-solid fa-gamepad"></i></span><div><small>Controls</small><strong id="controlsText">–</strong></div></article>
+        <article><span class="stat-icon"><i class="fa-brands fa-twitch"></i></span><div><small>Twitch account</small><strong id="usernameText">Not configured</strong></div></article>
+      </section>
+
+      <section id="connections" class="section-block">
+        <div class="section-heading">
+          <div><p class="eyebrow">Connections</p><h2>Your chats</h2></div>
+          <div class="button-row compact-actions"><button id="connectAllButton" class="secondary"><i class="fa-solid fa-link"></i> Connect all</button><button id="disconnectAllButton" class="ghost"><i class="fa-solid fa-link-slash"></i> Disconnect</button></div>
         </div>
-      </article>
-      <article class="panel control-panel">
-        <div class="panel-heading"><h2>Connection</h2></div>
-        <p id="connectionDetail" class="detail">Loading status...</p>
-        <div class="button-row"><button id="connectButton">Connect</button><button id="disconnectButton" class="secondary">Disconnect</button></div>
-      </article>
-    </section>
-    <section class="grid">
-      <article class="panel setup-panel">
-        <div class="panel-heading"><h2>YouTube setup</h2></div>
-        <p class="step"><strong>01</strong> · In Google Cloud, enable the YouTube Data API v3 and create a Web application OAuth client.</p>
-        <p class="step"><strong>02</strong> · Add this exact authorized redirect URI.</p>
-        <div class="copy-row"><code id="youtubeRedirectUrl">Loading...</code><button id="copyYoutubeRedirect" class="secondary">Copy</button></div>
-        <form id="youtubeOauthForm">
-          <label for="youtubeClientId">03 · Google OAuth credentials</label>
-          <div class="form-grid">
-            <input id="youtubeClientId" autocomplete="off" spellcheck="false" placeholder="Client ID" required>
-            <input id="youtubeClientSecret" type="password" autocomplete="off" spellcheck="false" placeholder="Client Secret" required>
+
+        <div class="platform-grid">
+          <article class="panel platform-card twitch-card">
+            <div class="platform-head">
+              <span class="platform-logo twitch"><i class="fa-brands fa-twitch"></i></span>
+              <div><h3>Twitch</h3><p id="connectionDetail">Loading status…</p></div>
+              <span id="connectionText" class="state-pill">Loading</span>
+            </div>
+            <div class="button-row"><button id="connectButton"><i class="fa-solid fa-play"></i> Connect</button><button id="disconnectButton" class="secondary"><i class="fa-solid fa-stop"></i> Disconnect</button></div>
+            <details id="twitchSetup" class="setup-guide">
+              <summary><span><i class="fa-solid fa-wand-magic-sparkles"></i> Set up Twitch</span><i class="fa-solid fa-chevron-down chevron"></i></summary>
+              <div class="details-body">
+                <ol class="steps">
+                  <li><span>1</span><p><a href="https://dev.twitch.tv/console/apps/create" target="_blank" rel="noreferrer">Create a Twitch application</a> and choose “Public / Chat Bot”.</p></li>
+                  <li><span>2</span><p>Add this address as the OAuth redirect URL.</p></li>
+                </ol>
+                <div class="copy-row"><code id="redirectUrl">Loading…</code><button id="copyRedirect" class="icon-button secondary" title="Copy" aria-label="Copy Twitch redirect URL"><i class="fa-regular fa-copy"></i></button></div>
+                <form id="oauthForm">
+                  <label for="clientId">Client ID</label>
+                  <div class="input-row"><input id="clientId" autocomplete="off" spellcheck="false" placeholder="Twitch Client ID" required><button type="submit"><i class="fa-solid fa-arrow-up-right-from-square"></i> Autorisieren</button></div>
+                </form>
+                <p id="oauthMessage" class="message" role="status"></p>
+                <div class="token-status-row"><span><i class="fa-solid fa-key"></i> Authorization</span><strong id="tokenStatus">Checking…</strong><button id="clearToken" class="text-danger" type="button">Remove</button></div>
+                <div id="tokenResult" class="token-result" hidden>
+                  <label>Access Token</label><code id="tokenValue"></code>
+                  <div class="button-row"><button id="copyToken" class="secondary" type="button"><i class="fa-regular fa-copy"></i> Copy</button><button id="saveToken" type="button"><i class="fa-solid fa-lock"></i> Save securely</button></div>
+                  <p class="warning"><i class="fa-solid fa-triangle-exclamation"></i> Never share this token.</p>
+                </div>
+              </div>
+            </details>
+          </article>
+
+          <article class="panel platform-card youtube-card">
+            <div class="platform-head">
+              <span class="platform-logo youtube"><i class="fa-brands fa-youtube"></i></span>
+              <div><h3>YouTube</h3><p id="youtubeConnectionDetail">Loading status…</p></div>
+              <span id="youtubeConnectionText" class="state-pill">Loading</span>
+            </div>
+            <div class="button-row"><button id="youtubeConnectButton"><i class="fa-solid fa-play"></i> Connect</button><button id="youtubeDisconnectButton" class="secondary"><i class="fa-solid fa-stop"></i> Disconnect</button></div>
+            <details id="youtubeSetup" class="setup-guide">
+              <summary><span><i class="fa-solid fa-wand-magic-sparkles"></i> Set up YouTube</span><i class="fa-solid fa-chevron-down chevron"></i></summary>
+              <div class="details-body">
+                <ol class="steps">
+                  <li><span>1</span><p>Enable <b>YouTube Data API v3</b> in Google Cloud and create a “Web application” OAuth client.</p></li>
+                  <li><span>2</span><p>Add this address as an authorized redirect URI.</p></li>
+                </ol>
+                <div class="copy-row"><code id="youtubeRedirectUrl">Loading…</code><button id="copyYoutubeRedirect" class="icon-button secondary" title="Copy" aria-label="Copy YouTube redirect URL"><i class="fa-regular fa-copy"></i></button></div>
+                <form id="youtubeOauthForm">
+                  <div class="form-grid">
+                    <label>Client ID<input id="youtubeClientId" autocomplete="off" spellcheck="false" placeholder="…apps.googleusercontent.com" required></label>
+                    <label>Client Secret<input id="youtubeClientSecret" type="password" autocomplete="off" spellcheck="false" placeholder="Google Client Secret" required></label>
+                  </div>
+                  <button type="submit"><i class="fa-solid fa-arrow-up-right-from-square"></i> Authorize YouTube</button>
+                </form>
+                <p id="youtubeOauthMessage" class="message" role="status"></p>
+                <div class="token-status-row"><span><i class="fa-solid fa-key"></i> Authorization</span><strong id="youtubeTokenStatus">Checking…</strong><button id="clearYoutubeToken" class="text-danger" type="button">Remove</button></div>
+              </div>
+            </details>
+          </article>
+        </div>
+        <p class="hint"><i class="fa-solid fa-circle-info"></i> Both platforms can stay connected at the same time. New commands share one queue.</p>
+      </section>
+
+      <section id="settings" class="section-block">
+        <div class="section-heading"><div><p class="eyebrow">Configuration</p><h2>Settings</h2></div></div>
+        <form id="settingsForm" class="panel settings-panel">
+          <div class="settings-group">
+            <h3>Basics</h3>
+            <div class="form-grid">
+              <label>Twitch username<input id="settingUsername" autocomplete="off" placeholder="yourchannel"></label>
+              <label>Command prefix <small>optional</small><input id="settingPrefix" autocomplete="off" maxlength="16" placeholder="e.g. !"></label>
+              <label>Movement duration <small>ticks</small><input id="settingMovement" type="number" min="1" max="200"></label>
+              <label>Camera step <small>degrees</small><input id="settingCamera" type="number" min="1" max="180" step="0.5"></label>
+            </div>
           </div>
-          <div class="button-row"><button type="submit">Authorize YouTube</button></div>
+          <div class="settings-group">
+            <h3>Behavior</h3>
+            <div class="toggles">
+              <label><input id="settingControls" type="checkbox"><span><b>Chat controls</b><small>Run commands</small></span></label>
+              <label><input id="settingOverlay" type="checkbox"><span><b>Slot overlay</b><small>Label inventories</small></span></label>
+              <label><input id="settingAutoConnect" type="checkbox"><span><b>Auto-connect</b><small>Connect on startup</small></span></label>
+              <label><input id="settingAutoReconnect" type="checkbox"><span><b>Auto-reconnect</b><small>Repair lost connections</small></span></label>
+              <label><input id="settingKeepRunning" type="checkbox"><span><b>Run in background</b><small>Keep playing unfocused</small></span></label>
+              <label><input id="settingFollowFirework" type="checkbox"><span><b>Follow firework</b><small>Twitch event</small></span></label>
+              <label><input id="settingSubTnt" type="checkbox"><span><b>Subscription TNT</b><small>Twitch event</small></span></label>
+              <label><input id="settingPrivilegedCommands" type="checkbox"><span><b>Moderator commands</b><small>Advanced permissions</small></span></label>
+            </div>
+          </div>
+          <details class="access-settings">
+            <summary><span><i class="fa-solid fa-user-shield"></i> Restrict viewer access</span><i class="fa-solid fa-chevron-down chevron"></i></summary>
+            <div class="form-grid details-body">
+              <label>Whitelist <small>one person per line</small><textarea id="settingWhitelist" rows="4" placeholder="Empty = everyone can control"></textarea></label>
+              <label>Blacklist <small>one person per line</small><textarea id="settingBlacklist" rows="4" placeholder="Blocked usernames"></textarea></label>
+            </div>
+          </details>
+          <div class="save-bar">
+            <p><i class="fa-solid fa-keyboard"></i> Press <kbd>F8</kbd> to lock local keyboard and mouse input.</p>
+            <div><span id="settingsMessage" class="message" role="status"></span><button type="submit"><i class="fa-solid fa-floppy-disk"></i> Save</button></div>
+          </div>
         </form>
-        <p id="youtubeOauthMessage" class="message" role="status"></p>
-        <div class="token-status-row"><span>Token</span><strong id="youtubeTokenStatus">Checking...</strong><button id="clearYoutubeToken" class="secondary danger">Clear</button></div>
-      </article>
-      <article class="panel control-panel">
-        <div class="panel-heading"><h2>YouTube connection</h2></div>
-        <p id="youtubeConnectionDetail" class="detail">Loading status...</p>
-        <div class="button-row"><button id="youtubeConnectButton">Connect</button><button id="youtubeDisconnectButton" class="secondary">Disconnect</button></div>
-        <p class="muted small">The active broadcast is detected automatically. Existing messages are ignored when connecting, so old commands are never replayed.</p>
-      </article>
-    </section>
-    <section class="panel settings-panel">
-      <div class="panel-heading"><h2>Settings</h2></div>
-      <form id="settingsForm">
-        <div class="form-grid">
-          <label>Twitch username<input id="settingUsername" autocomplete="off" placeholder="yourchannel"></label>
-          <label>Command prefix<input id="settingPrefix" autocomplete="off" maxlength="16" placeholder="Optional, e.g. !"></label>
-          <label>Movement duration (ticks)<input id="settingMovement" type="number" min="1" max="200"></label>
-          <label>Camera step (degrees)<input id="settingCamera" type="number" min="1" max="180" step="0.5"><span class="muted small">30–45° recommended</span></label>
-          <label>Whitelist<textarea id="settingWhitelist" rows="3" placeholder="One username per line"></textarea></label>
-          <label>Blacklist<textarea id="settingBlacklist" rows="3" placeholder="One username per line"></textarea></label>
+      </section>
+
+      <section id="tools" class="section-block">
+        <div class="section-heading"><div><p class="eyebrow">Stream & world</p><h2>Tools</h2></div></div>
+        <div class="tool-grid">
+          <article class="panel tool-card">
+            <span class="tool-icon"><i class="fa-solid fa-display"></i></span><div><h3>OBS chat</h3><p>Transparent browser source for Twitch and YouTube.</p></div>
+            <div class="copy-row"><code id="obsUrl">Loading…</code><button id="copyObs" class="icon-button secondary" title="Copy" aria-label="Copy OBS URL"><i class="fa-regular fa-copy"></i></button><a class="icon-button secondary" href="/obs" target="_blank" rel="noreferrer" title="Preview" aria-label="Open OBS preview"><i class="fa-solid fa-arrow-up-right-from-square"></i></a></div>
+          </article>
+          <article class="panel tool-card">
+            <span class="tool-icon"><i class="fa-solid fa-wifi"></i></span><div><h3>LAN access</h3><p>Open the dashboard on another device.</p></div>
+            <div class="copy-row"><code id="lanUrl">Detecting…</code><button id="copyLan" class="icon-button secondary" title="Copy" aria-label="Copy LAN URL"><i class="fa-regular fa-copy"></i></button></div>
+          </article>
         </div>
-        <div class="toggles">
-          <label><input id="settingControls" type="checkbox"> Controls</label>
-          <label><input id="settingOverlay" type="checkbox"> Slot overlay</label>
-          <label><input id="settingAutoConnect" type="checkbox"> Auto-connect</label>
-          <label><input id="settingAutoReconnect" type="checkbox"> Auto-reconnect</label>
-          <label><input id="settingKeepRunning" type="checkbox"> Keep running unfocused</label>
-          <label><input id="settingFollowFirework" type="checkbox"> Follow fires firework</label>
-          <label><input id="settingSubTnt" type="checkbox"> Sub spawns TNT</label>
-          <label><input id="settingPrivilegedCommands" type="checkbox"> Broadcaster/mod commands</label>
+        <div class="tool-grid lower-tools">
+          <article class="panel">
+            <div class="panel-title"><span class="tool-icon"><i class="fa-solid fa-earth-europe"></i></span><div><h3>World rules</h3><p>Requires cheats or operator permission.</p></div></div>
+            <div class="rule-grid"><label>Keep inventory<select id="keepInventory"><option value="true">On</option><option value="false">Off</option></select></label><button class="secondary rule-button" data-rule="keepInventory" data-input="keepInventory">Apply</button><label>Immediate respawn<select id="immediateRespawn"><option value="true">On</option><option value="false">Off</option></select></label><button class="secondary rule-button" data-rule="doImmediateRespawn" data-input="immediateRespawn">Apply</button></div>
+            <p id="ruleMessage" class="message" role="status"></p>
+          </article>
+          <article class="panel">
+            <div class="panel-title"><span class="tool-icon"><i class="fa-solid fa-vial"></i></span><div><h3>Test events</h3><p>Actions enter the real command queue.</p></div></div>
+            <div class="event-actions"><button class="secondary event-test" data-event="follow"><i class="fa-solid fa-fire-flame-curved"></i> Test follow</button><button class="secondary event-test" data-event="sub"><i class="fa-solid fa-bomb"></i> Test subscription</button></div>
+            <p id="eventMessage" class="message" role="status"></p>
+          </article>
         </div>
-        <p class="muted small">F8 toggles chat-only control. While active, local keyboard and mouse input is locked. Broadcasters and moderators can use <code>?time set day</code> when commands are enabled.</p>
-        <p class="warning">Moderator commands can run every Minecraft command your in-game account is allowed to use. Only enable this for moderators you trust.</p>
-        <div class="settings-actions"><button type="submit">Save</button><span id="settingsMessage" class="message" role="status"></span></div>
-      </form>
-    </section>
-    <section class="panel event-panel">
-      <div class="panel-heading"><div><h2>Event tests</h2><p class="muted small">Uses the real queue. Open a world first.</p></div></div>
-      <div class="event-grid">
-        <article><strong>Follow</strong><p class="muted small">Fires a firework effect at your position.</p><button class="secondary event-test" data-event="follow">Test follow</button></article>
-        <article><strong>Subscription</strong><p class="muted small">Spawns lit TNT five blocks beside you with an immediate firework effect.</p><button class="secondary event-test" data-event="sub">Test subscription</button></article>
-      </div>
-      <p id="eventMessage" class="message" role="status"></p>
-    </section>
-    <section class="panel world-panel">
-      <div class="panel-heading"><div><h2>World rules</h2><p class="muted small">Requires cheats or operator permission.</p></div></div>
-      <div class="rule-grid">
-        <label>Keep inventory<select id="keepInventory"><option value="true">On</option><option value="false">Off</option></select></label>
-        <button class="secondary rule-button" data-rule="keepInventory" data-input="keepInventory">Apply</button>
-        <label>Immediate respawn<select id="immediateRespawn"><option value="true">On</option><option value="false">Off</option></select></label>
-        <button class="secondary rule-button" data-rule="doImmediateRespawn" data-input="immediateRespawn">Apply</button>
-      </div>
-      <p id="ruleMessage" class="message" role="status"></p>
-    </section>
-    <section class="panel obs-panel">
-      <div class="panel-heading"><div><h2>OBS overlay</h2><p class="muted small">Add this URL as a transparent browser source.</p></div></div>
-      <div class="copy-row"><code id="obsUrl">Loading...</code><button id="copyObs" class="secondary">Copy</button><a class="button-link" href="/obs" target="_blank" rel="noreferrer">Preview</a></div>
-    </section>
-    <section class="panel activity-panel">
-      <div class="panel-heading activity-heading">
-        <h2>Activity</h2>
-        <div class="filters" aria-label="Activity filter"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="chat">Chat</button><button class="filter" data-filter="command">Commands</button><button class="filter" data-filter="event">Events</button><button class="filter" data-filter="action">Actions</button><button class="filter" data-filter="system">System</button></div>
-      </div>
-      <div class="table-wrap"><table><thead><tr><th>Time</th><th>Type</th><th>User / message</th><th>Action / result</th></tr></thead><tbody id="activityBody"><tr><td colspan="4" class="empty">Waiting for activity...</td></tr></tbody></table></div>
-    </section>
-  </main>
+      </section>
+
+      <section id="activity" class="section-block activity-section">
+        <div class="section-heading activity-heading">
+          <div><p class="eyebrow">Live log</p><h2>Activity</h2></div>
+          <div class="filters" aria-label="Activity filters"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="chat">Chat</button><button class="filter" data-filter="command">Commands</button><button class="filter" data-filter="event">Events</button><button class="filter" data-filter="action">Actions</button><button class="filter" data-filter="system">System</button></div>
+        </div>
+        <div class="panel activity-panel"><div class="table-wrap"><table><thead><tr><th>Time</th><th>Type</th><th>User / message</th><th>Action / result</th></tr></thead><tbody id="activityBody"><tr><td colspan="4" class="empty">No activity yet.</td></tr></tbody></table></div></div>
+      </section>
+    </main>
+  </div>
   <script src="/app.js"></script>
 </body>
 </html>

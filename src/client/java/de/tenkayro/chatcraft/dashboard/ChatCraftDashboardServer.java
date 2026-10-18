@@ -579,7 +579,8 @@ public final class ChatCraftDashboardServer {
         headers.set("X-Frame-Options", "DENY");
         headers.set("Referrer-Policy", "no-referrer");
         headers.set("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' https://cdn.7tv.app https://static-cdn.jtvnw.net; "
-            + "style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; form-action https://id.twitch.tv https://accounts.google.com");
+            + "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src https://cdnjs.cloudflare.com; "
+            + "script-src 'self'; frame-ancestors 'none'; form-action https://id.twitch.tv https://accounts.google.com");
         exchange.sendResponseHeaders(status, bytes.length);
         exchange.getResponseBody().write(bytes);
     }

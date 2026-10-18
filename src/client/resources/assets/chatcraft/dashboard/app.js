@@ -5,6 +5,21 @@ let currentState = "";
 let activeFilter = "all";
 let lastEvents = [];
 let settingsLoaded = false;
+let setupStateLoaded = false;
+
+const stateLabels = {
+  CONNECTED: "Connected",
+  CONNECTING: "Connecting…",
+  DISCONNECTED: "Disconnected",
+  ERROR: "Error",
+  AUTH_REQUIRED: "Authorization needed"
+};
+
+function showState(id, state) {
+  const node = $(id);
+  node.textContent = stateLabels[state] || state;
+  node.className = `state-pill ${state.toLowerCase().replaceAll("_", "-")}`;
+}
 
 async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
@@ -30,21 +45,31 @@ function setYoutubeMessage(text, kind = "") {
   node.className = `message ${kind}`;
 }
 
+function markCopied(button) {
+  const original = button.innerHTML;
+  button.innerHTML = '<i class="fa-solid fa-check"></i>';
+  button.title = "Copied";
+  setTimeout(() => {
+    button.innerHTML = original;
+    button.title = "Copy";
+  }, 1400);
+}
+
 function renderStatus(data) {
   const state = data.twitchState || "DISCONNECTED";
   const youtubeState = data.youtubeState || "DISCONNECTED";
   const connected = [state, youtubeState].filter((item) => item === "CONNECTED").length;
   const hasError = [state, youtubeState].includes("ERROR");
-  $("connectionBadge").textContent = `${connected}/2 connected`;
+  $("connectionBadge").textContent = `${connected} of 2 connected`;
   $("connectionBadge").className = `badge ${connected === 2 ? "connected" : hasError ? "error" : "neutral"}`;
-  $("connectionText").textContent = state;
-  $("youtubeConnectionText").textContent = youtubeState;
+  showState("connectionText", state);
+  showState("youtubeConnectionText", youtubeState);
   $("queueText").textContent = data.queueSize;
   $("usernameText").textContent = data.username || "Not configured";
   $("controlsText").textContent = data.controlsEnabled ? "Enabled" : "Disabled";
   const eventState = data.eventSubState || "DISCONNECTED";
   $("tokenStatus").textContent = eventState === "AUTH_REQUIRED"
-    ? "Re-authorize required"
+    ? "Authorize again"
     : data.tokenConfigured ? "Configured" : "Not configured";
   $("connectionDetail").textContent = eventState === "AUTH_REQUIRED"
     ? `${data.twitchDetail} · ${data.eventSubDetail}`
@@ -61,6 +86,11 @@ function renderStatus(data) {
   if (!settingsLoaded && data.settings) {
     fillSettings(data.settings);
     settingsLoaded = true;
+  }
+  if (!setupStateLoaded) {
+    $("twitchSetup").open = !data.tokenConfigured;
+    $("youtubeSetup").open = !data.youtubeTokenConfigured;
+    setupStateLoaded = true;
   }
   lastEvents = data.events || [];
   renderEvents();
@@ -79,7 +109,7 @@ async function readYoutubeOauthCallback() {
   const expected = sessionStorage.getItem("chatcraft.youtube.oauth.state") || "";
   history.replaceState(null, "", "/");
   if (!code || !expected || state !== expected) {
-    setYoutubeMessage("YouTube OAuth state mismatch. Start authorization again.", "error");
+    setYoutubeMessage("The YouTube authorization no longer matches. Start it again.", "error");
     return;
   }
   try {
@@ -88,7 +118,7 @@ async function readYoutubeOauthCallback() {
       body: JSON.stringify({ code, state })
     });
     sessionStorage.removeItem("chatcraft.youtube.oauth.state");
-    setYoutubeMessage("YouTube authorization saved securely.", "success");
+    setYoutubeMessage("YouTube was configured securely.", "success");
   } catch (error) {
     setYoutubeMessage(error.message, "error");
   }
@@ -176,14 +206,14 @@ function readOauthCallback() {
   const expected = sessionStorage.getItem("chatcraft.oauth.state") || "";
   currentState = params.get("state") || "";
   if (!expected || currentState !== expected) {
-    setMessage("OAuth state mismatch. Start authorization again from this dashboard.", "error");
+    setMessage("The Twitch authorization no longer matches. Start it again.", "error");
     history.replaceState(null, "", "/oauth/callback");
     return;
   }
   currentToken = params.get("access_token");
   $("tokenValue").textContent = currentToken;
   $("tokenResult").hidden = false;
-  setMessage("Twitch returned an access token. Copy it or save it directly to ChatCraft.", "success");
+  setMessage("Twitch confirmed access. Save the token securely now.", "success");
   history.replaceState(null, "", "/oauth/callback");
 }
 
@@ -214,10 +244,10 @@ $("saveToken").addEventListener("click", async () => {
     });
     currentToken = "";
     currentState = "";
-    $("tokenValue").textContent = "Saved securely in ChatCraft configuration";
+    $("tokenValue").textContent = "Stored securely in ChatCraft";
     $("settingUsername").value = data.username;
     sessionStorage.removeItem("chatcraft.oauth.state");
-    setMessage(`Token validated and saved for ${data.username}.`, "success");
+    setMessage(`Twitch was configured for ${data.username}.`, "success");
     await refresh();
   } catch (error) {
     setMessage(error.message, "error");
@@ -226,12 +256,12 @@ $("saveToken").addEventListener("click", async () => {
 });
 
 $("clearToken").addEventListener("click", async () => {
-  if (!confirm("Remove the saved Twitch access token and disconnect ChatCraft?")) return;
+  if (!confirm("Remove Twitch authorization and disconnect?")) return;
   try {
     await api("/api/token/clear", { method: "POST", body: "{}" });
     $("tokenResult").hidden = true;
     currentToken = "";
-    setMessage("Saved Twitch token removed.", "success");
+    setMessage("Twitch authorization was removed.", "success");
     await refresh();
   } catch (error) { setMessage(error.message, "error"); }
 });
@@ -257,10 +287,10 @@ $("youtubeOauthForm").addEventListener("submit", async (event) => {
 });
 
 $("clearYoutubeToken").addEventListener("click", async () => {
-  if (!confirm("Remove the saved YouTube tokens and disconnect ChatCraft?")) return;
+  if (!confirm("Remove YouTube authorization and disconnect?")) return;
   try {
     await api("/api/youtube/token/clear", { method: "POST", body: "{}" });
-    setYoutubeMessage("Saved YouTube tokens removed.", "success");
+    setYoutubeMessage("YouTube authorization was removed.", "success");
     await refresh();
   } catch (error) { setYoutubeMessage(error.message, "error"); }
 });
@@ -304,25 +334,25 @@ $("settingsForm").addEventListener("submit", async (event) => {
 
 $("copyToken").addEventListener("click", async () => {
   if (currentToken) await navigator.clipboard.writeText(currentToken);
-  $("copyToken").textContent = "Copied";
+  markCopied($("copyToken"));
 });
 $("copyRedirect").addEventListener("click", async () => {
   await navigator.clipboard.writeText($("redirectUrl").textContent);
-  $("copyRedirect").textContent = "Copied";
+  markCopied($("copyRedirect"));
 });
 $("copyYoutubeRedirect").addEventListener("click", async () => {
   await navigator.clipboard.writeText($("youtubeRedirectUrl").textContent);
-  $("copyYoutubeRedirect").textContent = "Copied";
+  markCopied($("copyYoutubeRedirect"));
 });
 $("copyLan").addEventListener("click", async () => {
   const url = $("lanUrl").textContent;
   if (!url.startsWith("https://")) return;
   await navigator.clipboard.writeText(url);
-  $("copyLan").textContent = "Copied";
+  markCopied($("copyLan"));
 });
 $("copyObs").addEventListener("click", async () => {
   await navigator.clipboard.writeText($("obsUrl").textContent);
-  $("copyObs").textContent = "Copied";
+  markCopied($("copyObs"));
 });
 
 for (const button of document.querySelectorAll(".filter")) {
@@ -343,6 +373,8 @@ $("connectButton").addEventListener("click", () => control("connect"));
 $("disconnectButton").addEventListener("click", () => control("disconnect"));
 $("youtubeConnectButton").addEventListener("click", () => control("youtubeConnect"));
 $("youtubeDisconnectButton").addEventListener("click", () => control("youtubeDisconnect"));
+$("connectAllButton").addEventListener("click", () => control("connectAll"));
+$("disconnectAllButton").addEventListener("click", () => control("disconnectAll"));
 
 for (const button of document.querySelectorAll(".rule-button")) {
   button.addEventListener("click", async () => {
@@ -354,7 +386,7 @@ for (const button of document.querySelectorAll(".rule-button")) {
         method: "POST",
         body: JSON.stringify({ rule: button.dataset.rule, value })
       });
-      message.textContent = `Requested ${button.dataset.rule} = ${value}. Check Minecraft chat for the result.`;
+      message.textContent = `${button.dataset.rule} = ${value ? "on" : "off"} was requested.`;
       message.className = "message success";
     } catch (error) {
       message.textContent = error.message;
@@ -374,7 +406,7 @@ for (const button of document.querySelectorAll(".event-test")) {
         method: "POST",
         body: JSON.stringify({ event: button.dataset.event })
       });
-      message.textContent = `${button.dataset.event === "follow" ? "Follow" : "Subscription"} test added to the queue.`;
+      message.textContent = `${button.dataset.event === "follow" ? "Follow" : "Subscription"} test was queued.`;
       message.className = "message success";
       await refresh();
     } catch (error) {

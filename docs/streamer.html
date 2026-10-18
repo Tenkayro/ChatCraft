@@ -3,23 +3,108 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="ChatCraft installation and streamer setup.">
+  <meta name="description" content="Install ChatCraft and connect Twitch and YouTube live chat.">
   <title>Streamer Setup · ChatCraft</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="top"><a class="logo" href="index.html">ChatCraft</a><nav aria-label="Guides"><a href="viewer.html">Commands</a><a class="active" href="streamer.html">Setup</a></nav></header>
-  <main class="guide">
-    <section class="intro"><span>STREAMER GUIDE</span><h1>Set up ChatCraft.</h1><p>Minecraft 1.21.1 · Fabric · Java 21</p></section>
-    <section><h2>1. Install</h2><ol><li>Install Fabric Loader.</li><li>Add Fabric API, Mod Menu, and ChatCraft to the <code>mods</code> folder.</li><li>Open Minecraft → Mods → ChatCraft → Open Web Panel.</li></ol></section>
-    <section><h2>2. Connect Twitch</h2><ol><li><a href="https://dev.twitch.tv/console/apps/create">Create a Twitch application</a>.</li><li>Select <b>Public</b> and <b>Chat Bot</b>.</li><li>Copy the exact redirect URL from the ChatCraft panel into Twitch.</li><li>Paste the Client ID into ChatCraft and select <b>Authorize</b>.</li><li>Save the token and connect.</li></ol><p class="note">The OAuth token is encrypted locally and never logged. The Client ID is public.</p></section>
-    <section><h2>3. Connect YouTube</h2><ol><li>Create a Google Cloud project and enable <b>YouTube Data API v3</b>.</li><li>Create OAuth credentials for a <b>Web application</b>.</li><li>Add the exact YouTube redirect URI shown in ChatCraft.</li><li>Enter the Client ID and Client Secret, then authorize your streaming channel.</li><li>Start a YouTube broadcast and select <b>Connect</b>. Twitch can remain connected at the same time.</li></ol><p class="note">Google tokens and the client secret are encrypted locally. Existing chat history is ignored when connecting.</p></section>
-    <section><h2>4. Configure</h2><div class="settings-list">
-      <div><b>Controls</b><span>Enable Twitch and YouTube commands</span></div><div><b>Prefix</b><span>Optional, for example <code>!</code></span></div><div><b>Queue</b><span>Run commands from both chats in arrival order without a cooldown</span></div><div><b>Movement</b><span>Set the default key duration</span></div><div><b>Camera</b><span>Set degrees per camera command</span></div><div><b>Access</b><span>Configure whitelist and blacklist</span></div><div><b>Overlay</b><span>Show inventory and recipe labels</span></div><div><b>Reconnect</b><span>Recover interrupted chat connections</span></div>
-    </div></section>
-    <section><h2>Stream tools</h2><div class="settings-list"><div><b>OBS</b><span>Copy the Browser Source URL from the panel</span></div><div><b>Chat-only control</b><span>Press F8 to lock local keyboard and mouse input; press it again to restore control</span></div><div><b>World rules</b><span>Apply keepInventory or immediate respawn; cheats or operator access required</span></div><div><b>Moderator commands</b><span>Only the broadcaster and Twitch moderators can use the <code>?</code> prefix. Examples: <code>?gamemode creative</code>, <code>?day</code>, <code>?clearweather</code>, or <code>?restart</code>.</span></div><div><b>Restart world</b><span><code>?restart</code> permanently replaces the current local world with a new Survival / Easy world. Cheats, keepInventory, and immediate respawn are enabled automatically.</span></div><div><b>Test</b><span>Run <code>/chatcraft test W</code></span></div></div><p class="note">Only enable moderator commands for people you trust. Minecraft still enforces the in-game account's command permissions. Restart only works in local singleplayer and permanently deletes that world.</p></section>
-    <section><h2>Quick fixes</h2><div class="fixes"><details><summary>Twitch will not connect</summary><p>Authorize again and verify the account and Client ID.</p></details><details><summary>Follow events require authorization</summary><p>Authorize Twitch again to grant the follower permission to the new token.</p></details><details><summary>Commands do nothing</summary><p>Check Controls, the prefix, and access lists. Then run <code>/chatcraft test W</code>.</p></details><details><summary>World rules fail</summary><p>Enable cheats or grant the Minecraft account operator access.</p></details><details><summary>The localhost OAuth page fails</summary><p>Keep Minecraft running and use the exact redirect URL shown in the panel.</p></details></div></section>
-    <p class="end-links"><a href="viewer.html">Viewer commands</a><a href="https://github.com/Tenkayro/ChatCraft">GitHub</a></p>
+  <header class="top">
+    <a class="logo" href="index.html"><span><i class="fa-solid fa-cube"></i></span> ChatCraft</a>
+    <nav aria-label="Guides"><a href="viewer.html">Commands</a><a class="active" href="streamer.html">Setup</a><a class="github-nav" href="https://github.com/Tenkayro/ChatCraft" aria-label="GitHub"><i class="fa-brands fa-github"></i></a></nav>
+  </header>
+
+  <main class="docs-main setup-page">
+    <header class="docs-hero">
+      <p class="section-label">STREAMER SETUP</p>
+      <h1>From install to live chat in four steps.</h1>
+      <p>Connect Twitch, YouTube, or both. The local dashboard guides you through authorization and keeps credentials encrypted on your computer.</p>
+      <div class="requirements"><span><i class="fa-solid fa-cube"></i> Minecraft 1.21.1</span><span><i class="fa-solid fa-layer-group"></i> Fabric</span><span><i class="fa-brands fa-java"></i> Java 21</span></div>
+    </header>
+
+    <nav class="setup-nav" aria-label="Setup steps">
+      <a href="#install"><b>1</b><span>Install</span></a><a href="#twitch"><b>2</b><span>Twitch</span></a><a href="#youtube"><b>3</b><span>YouTube</span></a><a href="#configure"><b>4</b><span>Configure</span></a>
+    </nav>
+
+    <section id="install" class="setup-step">
+      <div class="step-aside"><span>01</span><i class="fa-solid fa-download"></i></div>
+      <div class="step-content">
+        <p class="section-label">INSTALL</p><h2>Add ChatCraft to Minecraft</h2>
+        <ol class="check-list">
+          <li><i class="fa-solid fa-check"></i><span>Install <b>Fabric Loader</b> for Minecraft 1.21.1.</span></li>
+          <li><i class="fa-solid fa-check"></i><span>Place <b>Fabric API</b>, <b>Mod Menu</b>, and <b>ChatCraft</b> in the instance's <code>mods</code> folder.</span></li>
+          <li><i class="fa-solid fa-check"></i><span>Start Minecraft and open <b>Mods → ChatCraft → Open Web Panel</b>.</span></li>
+        </ol>
+        <div class="callout"><i class="fa-solid fa-circle-info"></i><p>Keep Minecraft open while using the dashboard. The panel runs locally and stops when the game closes.</p></div>
+      </div>
+    </section>
+
+    <section id="twitch" class="setup-step">
+      <div class="step-aside twitch-accent"><span>02</span><i class="fa-brands fa-twitch"></i></div>
+      <div class="step-content">
+        <p class="section-label">TWITCH</p><h2>Authorize your Twitch channel</h2>
+        <ol class="number-list">
+          <li><span>1</span><p><a href="https://dev.twitch.tv/console/apps/create">Create a Twitch application</a> and choose <b>Public</b> and <b>Chat Bot</b>.</p></li>
+          <li><span>2</span><p>In ChatCraft's dashboard, expand <b>Twitch setup</b> and copy the redirect URL.</p></li>
+          <li><span>3</span><p>Add that exact URL to the Twitch application, then paste its Client ID into ChatCraft.</p></li>
+          <li><span>4</span><p>Select <b>Authorize</b>, approve access, save the returned token, and connect.</p></li>
+        </ol>
+        <div class="callout secure"><i class="fa-solid fa-lock"></i><p>The OAuth token is encrypted locally and never written to logs.</p></div>
+      </div>
+    </section>
+
+    <section id="youtube" class="setup-step">
+      <div class="step-aside youtube-accent"><span>03</span><i class="fa-brands fa-youtube"></i></div>
+      <div class="step-content">
+        <p class="section-label">YOUTUBE</p><h2>Connect your YouTube live chat</h2>
+        <ol class="number-list">
+          <li><span>1</span><p>Create a project in <a href="https://console.cloud.google.com/">Google Cloud Console</a> and enable <b>YouTube Data API v3</b>.</p></li>
+          <li><span>2</span><p>Create an OAuth client for a <b>Web application</b>.</p></li>
+          <li><span>3</span><p>Expand <b>YouTube setup</b> in ChatCraft and add its exact redirect URL as an authorized redirect URI.</p></li>
+          <li><span>4</span><p>Enter the Client ID and Client Secret, authorize the streaming channel, then select <b>Connect</b>.</p></li>
+        </ol>
+        <div class="callout"><i class="fa-solid fa-tower-broadcast"></i><p>Start your YouTube broadcast before connecting. ChatCraft detects its live chat automatically and ignores old chat history.</p></div>
+      </div>
+    </section>
+
+    <section id="configure" class="setup-step">
+      <div class="step-aside"><span>04</span><i class="fa-solid fa-sliders"></i></div>
+      <div class="step-content">
+        <p class="section-label">CONFIGURE</p><h2>Choose how chat can play</h2>
+        <div class="feature-list">
+          <div><i class="fa-solid fa-power-off"></i><p><b>Chat control</b><span>Enable or pause commands without disconnecting.</span></p></div>
+          <div><i class="fa-solid fa-terminal"></i><p><b>Command prefix</b><span>Optional. Use <code>!</code> if normal conversation triggers too many commands.</span></p></div>
+          <div><i class="fa-solid fa-users"></i><p><b>Viewer access</b><span>Use the whitelist or blacklist to control who can play.</span></p></div>
+          <div><i class="fa-solid fa-rotate"></i><p><b>Reconnect</b><span>Recover interrupted Twitch and YouTube connections automatically.</span></p></div>
+          <div><i class="fa-solid fa-eye"></i><p><b>Slot overlay</b><span>Show green labels for inventory slots, recipes, and buttons.</span></p></div>
+          <div><i class="fa-solid fa-user-shield"></i><p><b>Moderator commands</b><span>Allow trusted owners and moderators to use the <code>?</code> command prefix.</span></p></div>
+        </div>
+        <div class="warning-callout"><i class="fa-solid fa-triangle-exclamation"></i><p>Moderator commands can run anything the in-game account is allowed to run. Only enable them for people you trust.</p></div>
+      </div>
+    </section>
+
+    <section class="tools-section">
+      <div class="section-heading"><div><p class="section-label">OPTIONAL</p><h2>Useful stream tools</h2></div><p>Everything here is available in the local dashboard.</p></div>
+      <div class="feature-list compact-features">
+        <div><i class="fa-solid fa-display"></i><p><b>OBS overlay</b><span>Copy the transparent browser source URL.</span></p></div>
+        <div><i class="fa-solid fa-keyboard"></i><p><b>Chat-only mode</b><span>Press <code>F8</code> to lock local keyboard and mouse input.</span></p></div>
+        <div><i class="fa-solid fa-earth-europe"></i><p><b>World rules</b><span>Apply keepInventory or immediate respawn.</span></p></div>
+        <div><i class="fa-solid fa-vial"></i><p><b>Test events</b><span>Try follow and subscription actions before going live.</span></p></div>
+      </div>
+    </section>
+
+    <section class="faq-section">
+      <div class="section-heading"><div><p class="section-label">QUICK FIXES</p><h2>Common setup problems</h2></div></div>
+      <div class="faq-list">
+        <details><summary><span>Twitch does not connect</span><i class="fa-solid fa-chevron-down"></i></summary><p>Authorize Twitch again and verify that the selected account and Client ID match.</p></details>
+        <details><summary><span>YouTube cannot find a chat</span><i class="fa-solid fa-chevron-down"></i></summary><p>Make sure the authorized channel owns or moderates the broadcast, the broadcast is live, and live chat is enabled.</p></details>
+        <details><summary><span>Chat commands do nothing</span><i class="fa-solid fa-chevron-down"></i></summary><p>Check Chat control, the optional prefix, and viewer access lists. Then test with <code>/chatcraft test W</code>.</p></details>
+        <details><summary><span>The OAuth page reports a redirect error</span><i class="fa-solid fa-chevron-down"></i></summary><p>Copy the redirect URL again from the dashboard. It must match exactly, including HTTPS and the port.</p></details>
+        <details><summary><span>World rules fail</span><i class="fa-solid fa-chevron-down"></i></summary><p>Enable cheats in singleplayer or grant the Minecraft account operator permission.</p></details>
+      </div>
+    </section>
+
+    <footer class="docs-footer"><span>Ready to go live?</span><a href="viewer.html">Share the viewer command guide <i class="fa-solid fa-arrow-right"></i></a></footer>
   </main>
 </body>
 </html>

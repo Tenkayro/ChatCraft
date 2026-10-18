@@ -3,18 +3,40 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="ChatCraft guides for Twitch and YouTube viewers and streamers.">
-  <title>ChatCraft Guide</title>
+  <meta name="description" content="Simple setup and command guides for ChatCraft on Twitch and YouTube.">
+  <title>ChatCraft Guides</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="landing">
+<body>
+  <header class="top">
+    <a class="logo" href="index.html"><span><i class="fa-solid fa-cube"></i></span> ChatCraft</a>
+    <nav aria-label="Guides"><a href="viewer.html">Commands</a><a href="streamer.html">Setup</a><a class="github-nav" href="https://github.com/Tenkayro/ChatCraft" aria-label="GitHub"><i class="fa-brands fa-github"></i></a></nav>
+  </header>
   <main class="landing-main">
-    <div class="brand"><span>MINECRAFT × TWITCH + YOUTUBE</span><h1>ChatCraft</h1><p>Choose a guide.</p></div>
-    <div class="choices">
-      <a class="choice" href="viewer.html"><small>TWITCH CHAT</small><h2>Viewer commands</h2><p>Move, mine, build, craft, and use inventories.</p><b>View commands →</b></a>
-      <a class="choice" href="streamer.html"><small>SETUP</small><h2>Streamer setup</h2><p>Install ChatCraft, connect Twitch, and configure your stream.</p><b>View setup →</b></a>
-    </div>
-    <a class="github" href="https://github.com/Tenkayro/ChatCraft">GitHub repository</a>
+    <section class="landing-hero">
+      <p class="section-label">MINECRAFT × TWITCH + YOUTUBE</p>
+      <h1>Chat controls the game.</h1>
+      <p>ChatCraft turns messages from Twitch and YouTube into real Minecraft actions. Pick the guide that matches what you want to do.</p>
+      <div class="platform-row"><span><i class="fa-brands fa-twitch"></i> Twitch</span><span><i class="fa-brands fa-youtube"></i> YouTube</span><span><i class="fa-solid fa-cubes"></i> Fabric 1.21.1</span></div>
+    </section>
+    <section class="guide-choices" aria-label="Choose a guide">
+      <a class="guide-choice viewer-choice" href="viewer.html">
+        <span class="choice-icon"><i class="fa-solid fa-gamepad"></i></span>
+        <small>I'M A VIEWER</small>
+        <h2>Control the game</h2>
+        <p>Learn the chat commands for movement, combat, building, inventories, and recipes.</p>
+        <b>Open command guide <i class="fa-solid fa-arrow-right"></i></b>
+      </a>
+      <a class="guide-choice streamer-choice" href="streamer.html">
+        <span class="choice-icon"><i class="fa-solid fa-tower-broadcast"></i></span>
+        <small>I'M A STREAMER</small>
+        <h2>Set up the stream</h2>
+        <p>Install the mod, connect Twitch and YouTube, then configure safe chat control.</p>
+        <b>Open setup guide <i class="fa-solid fa-arrow-right"></i></b>
+      </a>
+    </section>
+    <p class="landing-note"><i class="fa-solid fa-shield-halved"></i> Tokens stay encrypted on the streamer's computer. ChatCraft never sends them to its own server.</p>
   </main>
 </body>
 </html>
