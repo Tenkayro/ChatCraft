@@ -4,6 +4,7 @@ import de.tenkayro.chatcraft.command.CommandParser;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.Formatting;
 
 import java.util.ArrayDeque;
@@ -19,6 +20,9 @@ import java.util.regex.Pattern;
 public final class TwitchChatFeed {
     private static final int MAX_MESSAGES = 100;
     private static final Pattern WORD = Pattern.compile("[A-Za-z0-9]+(?:[.,][0-9]+){0,2}");
+    private static final Identifier PLATFORM_ICONS_FONT = Identifier.of("chatcraft", "platform_icons");
+    private static final String TWITCH_ICON = "\uE000";
+    private static final String YOUTUBE_ICON = "\uE001";
 
     private final CommandParser parser;
     private final Deque<Message> messages = new ArrayDeque<>();
@@ -65,8 +69,9 @@ public final class TwitchChatFeed {
     }
 
     private Text format(String user, String message, int color, String source) {
-        MutableText line = Text.literal(source.equals("YouTube") ? "[YT] " : "[TW] ")
-                .formatted(Formatting.DARK_GRAY);
+        String icon = source.equals("YouTube") ? YOUTUBE_ICON : TWITCH_ICON;
+        MutableText line = Text.literal(icon).styled(style -> style.withFont(PLATFORM_ICONS_FONT));
+        line.append(Text.literal(" "));
         line.append(Text.literal(user).styled(style -> style.withColor(color)));
         line.append(Text.literal(" \u00BB ").formatted(Formatting.DARK_GRAY));
         Matcher matcher = WORD.matcher(message);

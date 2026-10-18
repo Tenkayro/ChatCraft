@@ -13,7 +13,7 @@
     <aside class="sidebar">
       <a class="brand" href="#overview" aria-label="ChatCraft home">
         <span class="brand-mark"><i class="fa-solid fa-cube"></i></span>
-        <span><strong>ChatCraft</strong><small>Control Center</small></span>
+        <span><strong>ChatCraft</strong></span>
       </a>
       <nav aria-label="Sections">
         <a href="#overview"><i class="fa-solid fa-house"></i><span>Overview</span></a>
@@ -28,19 +28,19 @@
 
     <main>
       <header id="overview" class="topbar">
-        <div><p class="eyebrow">Dashboard</p><h1>Everything at a glance.</h1><p class="subtitle">Twitch and YouTube control your Minecraft world together.</p></div>
+        <div><h1>ChatCraft</h1><p class="subtitle">Twitch + YouTube → Minecraft</p></div>
         <div id="connectionBadge" class="badge neutral">Loading status</div>
       </header>
 
       <section class="quick-stats" aria-label="Status overview">
         <article><span class="stat-icon"><i class="fa-solid fa-layer-group"></i></span><div><small>Queue</small><strong id="queueText">0</strong></div></article>
         <article><span class="stat-icon"><i class="fa-solid fa-gamepad"></i></span><div><small>Controls</small><strong id="controlsText">–</strong></div></article>
-        <article><span class="stat-icon"><i class="fa-brands fa-twitch"></i></span><div><small>Twitch account</small><strong id="usernameText">Not configured</strong></div></article>
+        <article><span class="stat-icon"><i class="fa-brands fa-twitch"></i></span><div><small>Twitch</small><strong id="usernameText">Not configured</strong></div></article>
       </section>
 
       <section id="connections" class="section-block">
         <div class="section-heading">
-          <div><p class="eyebrow">Connections</p><h2>Your chats</h2></div>
+          <h2>Connections</h2>
           <div class="button-row compact-actions"><button id="connectAllButton" class="secondary"><i class="fa-solid fa-link"></i> Connect all</button><button id="disconnectAllButton" class="ghost"><i class="fa-solid fa-link-slash"></i> Disconnect</button></div>
         </div>
 
@@ -53,12 +53,9 @@
             </div>
             <div class="button-row"><button id="connectButton"><i class="fa-solid fa-play"></i> Connect</button><button id="disconnectButton" class="secondary"><i class="fa-solid fa-stop"></i> Disconnect</button></div>
             <details id="twitchSetup" class="setup-guide" open>
-              <summary><span><i class="fa-solid fa-wand-magic-sparkles"></i> Set up Twitch</span><i class="fa-solid fa-chevron-down chevron"></i></summary>
+              <summary><span><i class="fa-solid fa-key"></i> Credentials</span><i class="fa-solid fa-chevron-down chevron"></i></summary>
               <div class="details-body">
-                <ol class="steps">
-                  <li><span>1</span><p><a href="https://dev.twitch.tv/console/apps/create" target="_blank" rel="noreferrer">Create a Twitch application</a> and choose “Public / Chat Bot”.</p></li>
-                  <li><span>2</span><p>Add this address as the OAuth redirect URL.</p></li>
-                </ol>
+                <div class="setup-meta"><a href="https://dev.twitch.tv/console/apps/create" target="_blank" rel="noreferrer">Twitch Developer Console <i class="fa-solid fa-arrow-up-right-from-square"></i></a><span>OAuth redirect URL</span></div>
                 <div class="copy-row"><code id="redirectUrl">Loading…</code><button id="copyRedirect" class="icon-button secondary" title="Copy" aria-label="Copy Twitch redirect URL"><i class="fa-regular fa-copy"></i></button></div>
                 <form id="oauthForm">
                   <div class="form-grid credential-grid">
@@ -72,7 +69,6 @@
                 <div id="tokenResult" class="token-result" hidden>
                   <label>Access Token</label><code id="tokenValue"></code>
                   <div class="button-row"><button id="copyToken" class="secondary" type="button"><i class="fa-regular fa-copy"></i> Copy</button><button id="saveToken" type="button"><i class="fa-solid fa-lock"></i> Save securely</button></div>
-                  <p class="warning"><i class="fa-solid fa-triangle-exclamation"></i> Never share this token.</p>
                 </div>
               </div>
             </details>
@@ -86,12 +82,9 @@
             </div>
             <div class="button-row"><button id="youtubeConnectButton"><i class="fa-solid fa-play"></i> Connect</button><button id="youtubeDisconnectButton" class="secondary"><i class="fa-solid fa-stop"></i> Disconnect</button></div>
             <details id="youtubeSetup" class="setup-guide" open>
-              <summary><span><i class="fa-solid fa-wand-magic-sparkles"></i> Set up YouTube</span><i class="fa-solid fa-chevron-down chevron"></i></summary>
+              <summary><span><i class="fa-solid fa-key"></i> Credentials</span><i class="fa-solid fa-chevron-down chevron"></i></summary>
               <div class="details-body">
-                <ol class="steps">
-                  <li><span>1</span><p>Enable <b>YouTube Data API v3</b> in Google Cloud and create a “Web application” OAuth client.</p></li>
-                  <li><span>2</span><p>Add this address as an authorized redirect URI.</p></li>
-                </ol>
+                <div class="setup-meta"><a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer">Google Cloud Console <i class="fa-solid fa-arrow-up-right-from-square"></i></a><span>Authorized redirect URI</span></div>
                 <div class="copy-row"><code id="youtubeRedirectUrl">Loading…</code><button id="copyYoutubeRedirect" class="icon-button secondary" title="Copy" aria-label="Copy YouTube redirect URL"><i class="fa-regular fa-copy"></i></button></div>
                 <form id="youtubeOauthForm">
                   <div class="form-grid credential-grid">
@@ -107,11 +100,10 @@
             </details>
           </article>
         </div>
-        <p class="hint"><i class="fa-solid fa-circle-info"></i> Both platforms can stay connected at the same time. New commands share one queue.</p>
       </section>
 
       <section id="settings" class="section-block">
-        <div class="section-heading"><div><p class="eyebrow">Configuration</p><h2>Settings</h2></div></div>
+        <div class="section-heading"><h2>Settings</h2></div>
         <form id="settingsForm" class="panel settings-panel">
           <div class="settings-group">
             <h3>Basics</h3>
@@ -125,14 +117,14 @@
           <div class="settings-group">
             <h3>Behavior</h3>
             <div class="toggles">
-              <label><input id="settingControls" type="checkbox"><span><b>Chat controls</b><small>Run commands</small></span></label>
-              <label><input id="settingOverlay" type="checkbox"><span><b>Slot overlay</b><small>Label inventories</small></span></label>
-              <label><input id="settingAutoConnect" type="checkbox"><span><b>Auto-connect</b><small>Connect on startup</small></span></label>
-              <label><input id="settingAutoReconnect" type="checkbox"><span><b>Auto-reconnect</b><small>Repair lost connections</small></span></label>
-              <label><input id="settingKeepRunning" type="checkbox"><span><b>Run in background</b><small>Keep playing unfocused</small></span></label>
-              <label><input id="settingFollowFirework" type="checkbox"><span><b>Follow firework</b><small>Twitch event</small></span></label>
-              <label><input id="settingSubTnt" type="checkbox"><span><b>Subscription TNT</b><small>Twitch event</small></span></label>
-              <label><input id="settingPrivilegedCommands" type="checkbox"><span><b>Moderator commands</b><small>Advanced permissions</small></span></label>
+              <label><input id="settingControls" type="checkbox"><span><b>Chat controls</b></span></label>
+              <label><input id="settingOverlay" type="checkbox"><span><b>Slot overlay</b></span></label>
+              <label><input id="settingAutoConnect" type="checkbox"><span><b>Auto-connect</b></span></label>
+              <label><input id="settingAutoReconnect" type="checkbox"><span><b>Auto-reconnect</b></span></label>
+              <label><input id="settingKeepRunning" type="checkbox"><span><b>Run in background</b></span></label>
+              <label><input id="settingFollowFirework" type="checkbox"><span><b>Follow firework</b></span></label>
+              <label><input id="settingSubTnt" type="checkbox"><span><b>Subscription TNT</b></span></label>
+              <label><input id="settingPrivilegedCommands" type="checkbox"><span><b>Moderator commands</b></span></label>
             </div>
           </div>
           <details class="access-settings">
@@ -143,21 +135,21 @@
             </div>
           </details>
           <div class="save-bar">
-            <p><i class="fa-solid fa-keyboard"></i> Press <kbd>F8</kbd> to lock local keyboard and mouse input.</p>
+            <p><kbd>F8</kbd> Input lock</p>
             <div><span id="settingsMessage" class="message" role="status"></span><button type="submit"><i class="fa-solid fa-floppy-disk"></i> Save</button></div>
           </div>
         </form>
       </section>
 
       <section id="tools" class="section-block">
-        <div class="section-heading"><div><p class="eyebrow">Stream & world</p><h2>Tools</h2></div></div>
+        <div class="section-heading"><h2>Tools</h2></div>
         <div class="tool-grid">
           <article class="panel tool-card">
-            <span class="tool-icon"><i class="fa-solid fa-display"></i></span><div><h3>OBS chat</h3><p>Transparent browser source for Twitch and YouTube.</p></div>
+            <span class="tool-icon"><i class="fa-solid fa-display"></i></span><div><h3>OBS chat</h3></div>
             <div class="copy-row"><code id="obsUrl">Loading…</code><button id="copyObs" class="icon-button secondary" title="Copy" aria-label="Copy OBS URL"><i class="fa-regular fa-copy"></i></button><a class="icon-button secondary" href="/obs" target="_blank" rel="noreferrer" title="Preview" aria-label="Open OBS preview"><i class="fa-solid fa-arrow-up-right-from-square"></i></a></div>
           </article>
           <article class="panel tool-card">
-            <span class="tool-icon"><i class="fa-solid fa-wifi"></i></span><div><h3>LAN access</h3><p>Open the dashboard on another device.</p></div>
+            <span class="tool-icon"><i class="fa-solid fa-wifi"></i></span><div><h3>LAN access</h3></div>
             <div class="copy-row"><code id="lanUrl">Detecting…</code><button id="copyLan" class="icon-button secondary" title="Copy" aria-label="Copy LAN URL"><i class="fa-regular fa-copy"></i></button></div>
           </article>
         </div>
@@ -168,7 +160,7 @@
             <p id="ruleMessage" class="message" role="status"></p>
           </article>
           <article class="panel">
-            <div class="panel-title"><span class="tool-icon"><i class="fa-solid fa-vial"></i></span><div><h3>Test events</h3><p>Actions enter the real command queue.</p></div></div>
+            <div class="panel-title"><span class="tool-icon"><i class="fa-solid fa-vial"></i></span><div><h3>Test events</h3></div></div>
             <div class="event-actions"><button class="secondary event-test" data-event="follow"><i class="fa-solid fa-fire-flame-curved"></i> Test follow</button><button class="secondary event-test" data-event="sub"><i class="fa-solid fa-bomb"></i> Test subscription</button></div>
             <p id="eventMessage" class="message" role="status"></p>
           </article>
@@ -177,7 +169,7 @@
 
       <section id="activity" class="section-block activity-section">
         <div class="section-heading activity-heading">
-          <div><p class="eyebrow">Live log</p><h2>Activity</h2></div>
+          <h2>Activity</h2>
           <div class="filters" aria-label="Activity filters"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="chat">Chat</button><button class="filter" data-filter="command">Commands</button><button class="filter" data-filter="event">Events</button><button class="filter" data-filter="action">Actions</button><button class="filter" data-filter="system">System</button></div>
         </div>
         <div class="panel activity-panel"><div class="table-wrap"><table><thead><tr><th>Time</th><th>Type</th><th>User / message</th><th>Action / result</th></tr></thead><tbody id="activityBody"><tr><td colspan="4" class="empty">No activity yet.</td></tr></tbody></table></div></div>
@@ -185,14 +177,14 @@
 
       <section id="console" class="section-block console-section">
         <div class="section-heading console-heading">
-          <div><p class="eyebrow">Diagnostics</p><h2>Console <span id="consoleErrorCount" class="error-count" hidden>0 errors</span></h2></div>
+          <h2>Console <span id="consoleErrorCount" class="error-count" hidden>0 errors</span></h2>
           <div class="console-actions">
             <div class="console-filters" aria-label="Console filters"><button class="console-filter active" data-level="all">All</button><button class="console-filter" data-level="info">Info</button><button class="console-filter" data-level="warning">Warnings</button><button class="console-filter" data-level="error">Errors</button></div>
             <button id="clearConsole" class="ghost"><i class="fa-solid fa-trash-can"></i> Clear</button>
           </div>
         </div>
         <div class="console-panel" role="log" aria-live="polite">
-          <div class="console-toolbar"><span><i class="fa-solid fa-circle-info"></i> Runtime, connection, API, and web panel messages</span><span id="consoleCount">0 entries</span></div>
+          <div class="console-toolbar"><span>Live diagnostics</span><span id="consoleCount">0 entries</span></div>
           <div id="consoleBody" class="console-body"><div class="console-empty"><i class="fa-solid fa-check-circle"></i><span>No diagnostic messages yet.</span></div></div>
         </div>
       </section>

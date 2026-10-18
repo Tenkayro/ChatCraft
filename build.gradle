@@ -89,13 +89,41 @@ tasks.named("remapSourcesJar").configure {
 	archiveFileName = "chatcraft-sources.jar"
 }
 
-def prismChatCraftMods = file("C:/Users/turte/AppData/Roaming/PrismLauncher/instances/ChatCraft/minecraft/mods")
+abstract class VerifyPrismInstance extends DefaultTask {
+	@Input
+	abstract Property<String> getExpectedUuid()
+
+	@InputFile
+	abstract RegularFileProperty getInstanceConfig()
+
+	@TaskAction
+	void verify() {
+		def config = instanceConfig.get().asFile
+		def expected = "uuid=${expectedUuid.get()}"
+		if (!config.readLines("UTF-8").any { it.trim() == expected }) {
+			throw new GradleException("Prism instance UUID does not match ${config.parentFile.name}")
+		}
+	}
+}
+
+def prismInstancesPath = providers.gradleProperty("prism_instances_path").get()
 def prismLauncherExecutable = providers.gradleProperty("prism_launcher_path").get()
 def prismInstanceId = providers.gradleProperty("prism_instance_id").get()
+def prismInstanceUuid = providers.gradleProperty("prism_instance_uuid").get()
+def prismInstanceDirectory = file("${prismInstancesPath}/${prismInstanceId}")
+def prismChatCraftMods = new File(prismInstanceDirectory, "minecraft/mods")
+
+def verifyPrismInstance = tasks.register("verifyPrismInstance", VerifyPrismInstance) {
+	group = "custom"
+	description = "Verifies that the configured Prism folder belongs to the expected instance UUID."
+	expectedUuid.set(prismInstanceUuid)
+	instanceConfig.set(new File(prismInstanceDirectory, "instance.cfg"))
+}
 
 def removeOldPrismChatCraft = tasks.register("removeOldPrismChatCraft", Delete) {
 	group = "custom"
 	description = "Removes existing ChatCraft JARs from the configured Prism Launcher instance."
+	dependsOn verifyPrismInstance
 	delete fileTree(prismChatCraftMods) {
 		include "chatcraft*.jar"
 		include "chatcraft*.jar.disabled"
