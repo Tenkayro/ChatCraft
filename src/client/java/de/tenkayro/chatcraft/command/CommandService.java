@@ -7,13 +7,21 @@ import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.dashboard.ActivityLog;
 
 import java.util.Locale;
+import java.util.ArrayDeque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Deque;
 import java.util.stream.Collectors;
 
 public final class CommandService {
+    private static final int MAX_COMMANDS_PER_WINDOW = 8;
+    private static final long RATE_WINDOW_MILLIS = 10_000L;
+    private static final int MAX_TOTAL_MOVEMENT_TICKS = 1_200;
     private final CommandParser parser;
     private final ActionQueue queue;
     private final ActivityLog activity;
+    private final Map<String, Deque<Long>> recentCommands = new HashMap<>();
 
     public CommandService(CommandParser parser, ActionQueue queue, ActivityLog activity) {
         this.parser = parser;
@@ -26,9 +34,18 @@ public final class CommandService {
         String normalizedUser = user == null ? "unknown" : user.toLowerCase(Locale.ROOT);
         if (!config.controlsEnabled && !bypassPolicy) return rejected(normalizedUser, message, "controls disabled");
         if (!bypassPolicy && !config.userAllowed(normalizedUser)) return rejected(normalizedUser, message, "user blocked");
+        if (!bypassPolicy && isRateLimited(normalizedUser)) {
+            return rejected(normalizedUser, message, "rate limit: maximum 8 commands per 10 seconds");
+        }
         List<ActionGroup> sequence = parser.parse(message);
         if (sequence.isEmpty()) return rejected(normalizedUser, message, "not a command");
-        queue.offerAll(sequence);
+        if (totalMovementTicks(sequence, config.movementDurationTicks) > MAX_TOTAL_MOVEMENT_TICKS) {
+            return rejected(normalizedUser, message, "movement sequence exceeds the 60-second limit");
+        }
+        if (!queue.offerAll(sequence)) {
+            return rejected(normalizedUser, message, "queue full: maximum 64 pending command groups");
+        }
+        if (!bypassPolicy) recordAcceptedCommand(normalizedUser);
         activity.add("command", normalizedUser, message,
                 sequence.stream().map(CommandService::describeGroup).collect(Collectors.joining(" -> ")), "queued");
         return true;
@@ -53,7 +70,9 @@ public final class CommandService {
             return true;
         }
         String resolved = resolveAdminAlias(command);
-        queue.offer(new ChatAction(ChatAction.Type.MINECRAFT_COMMAND, resolved));
+        if (!queue.offer(new ChatAction(ChatAction.Type.MINECRAFT_COMMAND, resolved))) {
+            return rejected(normalizedUser, message, "queue full: maximum 64 pending command groups");
+        }
         activity.add("command", normalizedUser, message, "/" + resolved, "privileged command queued");
         return true;
     }
@@ -88,6 +107,44 @@ public final class CommandService {
     private boolean rejected(String user, String message, String reason) {
         activity.add("command", user, message, "", reason);
         return false;
+    }
+
+    private synchronized boolean isRateLimited(String user) {
+        long cutoff = System.currentTimeMillis() - RATE_WINDOW_MILLIS;
+        Deque<Long> timestamps = recentCommands.get(user);
+        if (timestamps == null) return false;
+        while (!timestamps.isEmpty() && timestamps.peekFirst() < cutoff) timestamps.removeFirst();
+        if (timestamps.isEmpty()) recentCommands.remove(user);
+        return timestamps.size() >= MAX_COMMANDS_PER_WINDOW;
+    }
+
+    private synchronized void recordAcceptedCommand(String user) {
+        recentCommands.computeIfAbsent(user, ignored -> new ArrayDeque<>()).addLast(System.currentTimeMillis());
+        if (recentCommands.size() > 1_000) {
+            long cutoff = System.currentTimeMillis() - RATE_WINDOW_MILLIS;
+            recentCommands.entrySet().removeIf(entry -> entry.getValue().isEmpty()
+                    || entry.getValue().peekLast() < cutoff);
+        }
+    }
+
+    private static int totalMovementTicks(List<ActionGroup> sequence, int defaultDuration) {
+        int total = 0;
+        for (ActionGroup group : sequence) {
+            int longest = 0;
+            for (ChatAction action : group.actions()) {
+                if (!isMovement(action.type())) continue;
+                longest = Math.max(longest, action.durationTicks() > 0 ? action.durationTicks() : defaultDuration);
+            }
+            total += longest;
+        }
+        return total;
+    }
+
+    private static boolean isMovement(ChatAction.Type type) {
+        return switch (type) {
+            case FORWARD, BACK, LEFT, RIGHT, JUMP, SPRINT -> true;
+            default -> false;
+        };
     }
 
     private static String describe(ChatAction action) {

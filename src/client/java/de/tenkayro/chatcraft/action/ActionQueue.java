@@ -5,15 +5,20 @@ import java.util.Deque;
 import java.util.List;
 
 public final class ActionQueue {
+    public static final int MAX_QUEUED_GROUPS = 64;
     private final Deque<ActionGroup> actions = new ArrayDeque<>();
 
     public synchronized boolean offer(ChatAction action) {
+        if (actions.size() >= MAX_QUEUED_GROUPS) return false;
         actions.addLast(new ActionGroup(action));
         return true;
     }
 
-    public synchronized void offerAll(List<ActionGroup> sequence) {
+    public synchronized boolean offerAll(List<ActionGroup> sequence) {
+        if (sequence.isEmpty()) return true;
+        if (sequence.size() > MAX_QUEUED_GROUPS - actions.size()) return false;
         actions.addAll(sequence);
+        return true;
     }
 
     public synchronized void offerPriority(ChatAction action) {

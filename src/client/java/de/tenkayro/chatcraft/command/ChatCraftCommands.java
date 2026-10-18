@@ -2,6 +2,7 @@ package de.tenkayro.chatcraft.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import de.tenkayro.chatcraft.ChatCraftClient;
+import de.tenkayro.chatcraft.identity.ClientIdentity;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.minecraft.text.Text;
@@ -10,8 +11,8 @@ public final class ChatCraftCommands {
     private ChatCraftCommands() { }
 
     public static void register() {
-        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(
-            ClientCommandManager.literal("chatcraft")
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+            dispatcher.register(ClientCommandManager.literal("chatcraft")
                 .then(ClientCommandManager.literal("connect").executes(context -> {
                     ChatCraftClient.twitch().connect();
                     context.getSource().sendFeedback(Text.literal("ChatCraft: connection requested"));
@@ -45,6 +46,46 @@ public final class ChatCraftCommands {
                     context.getSource().sendFeedback(Text.literal("ChatCraft: queue cleared and keys released"));
                     return 1;
                 }))
-        ));
+            );
+            dispatcher.register(ClientCommandManager.literal("nick")
+                .then(ClientCommandManager.literal("set")
+                    .then(ClientCommandManager.argument("name", StringArgumentType.word()).executes(context -> {
+                        String name = StringArgumentType.getString(context, "name");
+                        if (!ClientIdentity.isValidName(name)) {
+                            context.getSource().sendError(Text.literal(
+                                    "ChatCraft: nickname must contain 1-16 letters, numbers, or underscores"));
+                            return 0;
+                        }
+                        ChatCraftClient.identity().setNickname(name);
+                        context.getSource().sendFeedback(Text.literal(
+                                "ChatCraft: client-side nickname set to " + name));
+                        return 1;
+                    })))
+                .then(ClientCommandManager.literal("clear").executes(context -> {
+                    ChatCraftClient.identity().clearNickname();
+                    context.getSource().sendFeedback(Text.literal("ChatCraft: client-side nickname cleared"));
+                    return 1;
+                }))
+            );
+            dispatcher.register(ClientCommandManager.literal("skin")
+                .then(ClientCommandManager.literal("set")
+                    .then(ClientCommandManager.argument("username", StringArgumentType.word()).executes(context -> {
+                        String username = StringArgumentType.getString(context, "username");
+                        if (!ChatCraftClient.identity().setSkin(username)) {
+                            context.getSource().sendError(Text.literal(
+                                    "ChatCraft: Minecraft username must contain 1-16 letters, numbers, or underscores"));
+                            return 0;
+                        }
+                        context.getSource().sendFeedback(Text.literal(
+                                "ChatCraft: loading skin from " + username + "…"));
+                        return 1;
+                    })))
+                .then(ClientCommandManager.literal("clear").executes(context -> {
+                    ChatCraftClient.identity().clearSkin();
+                    context.getSource().sendFeedback(Text.literal("ChatCraft: client-side skin cleared"));
+                    return 1;
+                }))
+            );
+        });
     }
 }

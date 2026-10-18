@@ -11,6 +11,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class CommandParser {
+    public static final int MAX_MESSAGE_LENGTH = 256;
+    public static final int MAX_SEQUENCE_STEPS = 12;
+    public static final int MAX_SIMULTANEOUS_ACTIONS = 4;
+    public static final double MAX_DURATION_SECONDS = 15.0;
     private static final Pattern SLOT = Pattern.compile("^(R|S)?([A-Z]+[1-9][0-9]*)$");
     private static final Pattern RECIPE = Pattern.compile("^(?:R|RECIPE)([1-9]|1[0-9]|20)$");
     private static final Pattern RECIPE_ALTERNATIVE = Pattern.compile("^V([1-9][0-9]?)$");
@@ -22,6 +26,7 @@ public final class CommandParser {
     public List<ActionGroup> parse(String raw) {
         if (raw == null) return List.of();
         String value = sanitizeMessage(raw).trim();
+        if (value.length() > MAX_MESSAGE_LENGTH) return List.of();
         String prefix = ChatCraftConfig.get().commandPrefix;
         if (!prefix.isEmpty()) {
             if (!value.startsWith(prefix)) return List.of();
@@ -29,8 +34,10 @@ public final class CommandParser {
         }
         if (value.isEmpty()) return List.of();
         String normalized = value.replaceAll("\\s*\\+\\s*", "+");
+        String[] steps = normalized.split("\\s+");
+        if (steps.length > MAX_SEQUENCE_STEPS) return List.of();
         List<ActionGroup> sequence = new ArrayList<>();
-        for (String step : normalized.split("\\s+")) {
+        for (String step : steps) {
             String upperStep = step.toUpperCase(Locale.ROOT);
             if (upperStep.equals("TOWER") || upperStep.equals("PILLAR") || upperStep.equals("BUILDUP")) {
                 sequence.add(new ActionGroup(List.of(
@@ -39,7 +46,9 @@ public final class CommandParser {
                 continue;
             }
             List<ChatAction> simultaneous = new ArrayList<>();
-            for (String part : step.split("\\+", -1)) {
+            String[] parts = step.split("\\+", -1);
+            if (parts.length > MAX_SIMULTANEOUS_ACTIONS) return List.of();
+            for (String part : parts) {
                 ChatAction action = parseSingle(part);
                 if (action == null) return List.of();
                 simultaneous.add(action);
@@ -69,7 +78,7 @@ public final class CommandParser {
             if (action == null || !supportsDuration(action.type())) return null;
             try {
                 double seconds = Double.parseDouble(timed.group(2).replace(',', '.'));
-                if (!Double.isFinite(seconds) || seconds <= 0.0 || seconds > 30.0) return null;
+                if (!Double.isFinite(seconds) || seconds <= 0.0 || seconds > MAX_DURATION_SECONDS) return null;
                 return new ChatAction(action.type(), action.argument(), Math.max(1, (int) Math.round(seconds * 20.0)));
             } catch (NumberFormatException ignored) {
                 return null;

@@ -45,6 +45,8 @@ public final class ChatCraftConfig {
     public boolean privilegedCommandsEnabled = true;
     public int movementDurationTicks = 10;
     public float cameraStepDegrees = 30.0f;
+    public String clientNickname = "";
+    public String clientSkinUsername = "";
     public List<String> whitelist = new ArrayList<>();
     public List<String> blacklist = new ArrayList<>();
 
@@ -135,6 +137,10 @@ public final class ChatCraftConfig {
         if (blacklist == null) blacklist = new ArrayList<>();
         movementDurationTicks = Math.max(1, Math.min(200, movementDurationTicks));
         cameraStepDegrees = Math.max(1.0f, Math.min(180.0f, cameraStepDegrees));
+        if (clientNickname == null) clientNickname = "";
+        clientNickname = clientNickname.trim();
+        if (clientSkinUsername == null) clientSkinUsername = "";
+        clientSkinUsername = clientSkinUsername.trim();
     }
 
     private static String decrypt(String value) throws Exception {

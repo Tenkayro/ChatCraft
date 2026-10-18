@@ -10,6 +10,8 @@
     "MinecraftClientInvoker",
     "MouseAccessor",
     "MouseMixin",
+    "PlayerEntityMixin",
+    "PlayerListEntryMixin",
     "RecipeAlternativesWidgetAccessor",
     "RecipeBookResultsAccessor",
     "RecipeBookWidgetAccessor",

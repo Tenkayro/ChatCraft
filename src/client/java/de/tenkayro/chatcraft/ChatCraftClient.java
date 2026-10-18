@@ -11,6 +11,7 @@ import de.tenkayro.chatcraft.dashboard.ChatCraftDashboardServer;
 import de.tenkayro.chatcraft.gui.CustomCursor;
 import de.tenkayro.chatcraft.input.InputController;
 import de.tenkayro.chatcraft.input.BackgroundModeController;
+import de.tenkayro.chatcraft.identity.ClientIdentity;
 import de.tenkayro.chatcraft.overlay.ScreenOverlayRenderer;
 import de.tenkayro.chatcraft.twitch.TwitchConnection;
 import de.tenkayro.chatcraft.twitch.TwitchEventSub;
@@ -19,6 +20,7 @@ import de.tenkayro.chatcraft.youtube.YouTubeConnection;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -39,6 +41,7 @@ public final class ChatCraftClient implements ClientModInitializer {
     private static BackgroundModeController backgroundMode;
     private static ActivityLog activity;
     private static ChatCraftDashboardServer dashboard;
+    private static ClientIdentity identity;
 
     @Override
     public void onInitializeClient() {
@@ -54,11 +57,14 @@ public final class ChatCraftClient implements ClientModInitializer {
         input = new InputController(queue, activity);
         backgroundMode = new BackgroundModeController(input);
         dashboard = new ChatCraftDashboardServer(activity);
+        identity = new ClientIdentity(activity);
         dashboard.start();
+        identity.loadConfiguredSkin();
         ScreenOverlayRenderer.register();
         ClientLifecycleEvents.CLIENT_STARTED.register(CustomCursor::install);
         ClientTickEvents.END_CLIENT_TICK.register(input::tick);
         ClientTickEvents.END_CLIENT_TICK.register(backgroundMode::tick);
+        ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> identity.rewriteLocalName(message));
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             if (client.player != null) client.player.sendMessage(dashboardMessage(), false);
         });
@@ -88,6 +94,7 @@ public final class ChatCraftClient implements ClientModInitializer {
     public static InputController input() { return input; }
     public static ActivityLog activity() { return activity; }
     public static ChatCraftDashboardServer dashboard() { return dashboard; }
+    public static ClientIdentity identity() { return identity; }
 
     public static Text dashboardMessage() {
         if (!dashboard.running()) return Text.literal("ChatCraft dashboard: " + dashboard.detail())
