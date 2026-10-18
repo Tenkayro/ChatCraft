@@ -83,6 +83,10 @@ public final class InputController {
         }
     }
 
+    public void renderCameraFrame(MinecraftClient client) {
+        camera.renderFrame(client);
+    }
+
     public void releaseAll() {
         heldUntil.keySet().forEach(key -> key.setPressed(false));
         heldUntil.clear();

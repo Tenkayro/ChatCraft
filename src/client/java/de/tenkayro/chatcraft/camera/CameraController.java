@@ -4,38 +4,60 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.MathHelper;
 
 public final class CameraController {
-    private static final int SMOOTHING_TICKS = 6;
+    private static final long TURN_DURATION_NANOS = 300_000_000L;
+    private float startYaw;
+    private float startPitch;
     private float targetYaw;
     private float targetPitch;
-    private int remainingTicks;
+    private long startedAt;
+    private boolean turning;
 
     public void turn(MinecraftClient client, float yawDelta, float pitchDelta) {
         if (client.player == null) return;
-        float baseYaw = remainingTicks > 0 ? targetYaw : client.player.getYaw();
-        float basePitch = remainingTicks > 0 ? targetPitch : client.player.getPitch();
+        long now = System.nanoTime();
+        update(client, now);
+        float baseYaw = turning ? targetYaw : client.player.getYaw();
+        float basePitch = turning ? targetPitch : client.player.getPitch();
+        startYaw = client.player.getYaw();
+        startPitch = client.player.getPitch();
         targetYaw = baseYaw + yawDelta;
         targetPitch = MathHelper.clamp(basePitch + pitchDelta, -90.0f, 90.0f);
-        remainingTicks = SMOOTHING_TICKS;
+        startedAt = now;
+        turning = true;
     }
 
     public void tick(MinecraftClient client) {
+        update(client, System.nanoTime());
+    }
+
+    public void renderFrame(MinecraftClient client) {
+        update(client, System.nanoTime());
+    }
+
+    private void update(MinecraftClient client, long now) {
         if (client.player == null) {
-            remainingTicks = 0;
+            turning = false;
             return;
         }
-        if (remainingTicks <= 0) return;
-        float factor = remainingTicks == 1 ? 1.0F : 0.38F;
-        float yawDifference = MathHelper.wrapDegrees(targetYaw - client.player.getYaw());
-        client.player.setYaw(client.player.getYaw() + yawDifference * factor);
-        client.player.setPitch(MathHelper.lerp(factor, client.player.getPitch(), targetPitch));
-        remainingTicks--;
+        if (!turning) return;
+
+        float progress = MathHelper.clamp((float) (now - startedAt) / TURN_DURATION_NANOS, 0.0F, 1.0F);
+        float eased = progress * progress * (3.0F - 2.0F * progress);
+        float yaw = startYaw + MathHelper.wrapDegrees(targetYaw - startYaw) * eased;
+        float pitch = MathHelper.lerp(eased, startPitch, targetPitch);
+
+        client.player.setYaw(yaw);
+        client.player.setPitch(pitch);
+        client.player.prevYaw = yaw;
+        client.player.prevPitch = pitch;
+        if (progress >= 1.0F) turning = false;
     }
 
     public boolean isTurning() {
-        return remainingTicks > 0;
+        return turning;
     }
 
     public void cancel() {
-        remainingTicks = 0;
+        turning = false;
     }
 }
