@@ -6,14 +6,25 @@ import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.identity.ClientIdentity;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
 public final class ChatCraftCommands {
+    private static long clientTick;
+    private static long twitchFeedbackDeadline;
+    private static long youtubeFeedbackDeadline;
+
     private ChatCraftCommands() { }
 
     public static void register() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(
             ClientCommandManager.literal("cc")
+                .executes(context -> showHelp(context.getSource()))
+                .then(ClientCommandManager.literal("help")
+                    .executes(context -> showHelp(context.getSource())))
                 .then(ClientCommandManager.literal("connect")
                     .executes(context -> connect(context.getSource(), "all"))
                     .then(ClientCommandManager.literal("twitch")
@@ -26,14 +37,8 @@ public final class ChatCraftCommands {
                         .executes(context -> disconnect(context.getSource(), "twitch")))
                     .then(ClientCommandManager.literal("youtube")
                         .executes(context -> disconnect(context.getSource(), "youtube"))))
-                .then(ClientCommandManager.literal("status").executes(context -> {
-                    context.getSource().sendFeedback(Text.literal("ChatCraft: Twitch="
-                            + ChatCraftClient.twitch().detail() + ", YouTube="
-                            + ChatCraftClient.youtube().detail() + ", queued="
-                            + ChatCraftClient.queue().size() + ", dashboard="
-                            + ChatCraftClient.dashboard().detail()));
-                    return 1;
-                }))
+                .then(ClientCommandManager.literal("status")
+                    .executes(context -> showStatus(context.getSource())))
                 .then(ClientCommandManager.literal("dashboard").executes(context -> {
                     context.getSource().sendFeedback(ChatCraftClient.dashboardMessage());
                     return ChatCraftClient.dashboard().running() ? 1 : 0;
@@ -42,50 +47,50 @@ public final class ChatCraftCommands {
                     .then(ClientCommandManager.argument("command", StringArgumentType.greedyString()).executes(context -> {
                         String command = StringArgumentType.getString(context, "command");
                         boolean accepted = ChatCraftClient.commands().submit("local-test", command, true);
-                        context.getSource().sendFeedback(Text.literal(accepted
-                                ? "ChatCraft: queued " + command : "ChatCraft: unknown command"));
+                        if (accepted) success(context.getSource(), "Queued test command: " + command);
+                        else error(context.getSource(), "Unknown or invalid test command: " + command);
                         return accepted ? 1 : 0;
                     })))
-                .then(ClientCommandManager.literal("clearqueue").executes(context -> {
-                    ChatCraftClient.queue().clear();
-                    ChatCraftClient.input().releaseAll();
-                    context.getSource().sendFeedback(Text.literal("ChatCraft: queue cleared and keys released"));
-                    return 1;
-                }))
+                .then(ClientCommandManager.literal("queue")
+                    .then(ClientCommandManager.literal("clear").executes(context -> {
+                        ChatCraftClient.queue().clear();
+                        ChatCraftClient.input().releaseAll();
+                        success(context.getSource(), "Queue cleared and all simulated keys released");
+                        return 1;
+                    })))
                 .then(ClientCommandManager.literal("controls")
                     .then(ClientCommandManager.literal("on").executes(context -> {
                         setControls(true);
-                        context.getSource().sendFeedback(Text.literal("ChatCraft: chat controls enabled"));
+                        success(context.getSource(), "Chat controls enabled");
                         return 1;
                     }))
                     .then(ClientCommandManager.literal("off").executes(context -> {
                         setControls(false);
                         ChatCraftClient.queue().clear();
                         ChatCraftClient.input().releaseAll();
-                        context.getSource().sendFeedback(Text.literal(
-                                "ChatCraft: chat controls disabled and queue cleared"));
+                        success(context.getSource(), "Chat controls disabled; queue cleared");
                         return 1;
                     })))
                 .then(ClientCommandManager.literal("overlay")
                     .then(ClientCommandManager.literal("on").executes(context -> {
                         setOverlay(true);
-                        context.getSource().sendFeedback(Text.literal("ChatCraft: in-game overlay enabled"));
+                        success(context.getSource(), "In-game overlay enabled");
                         return 1;
                     }))
                     .then(ClientCommandManager.literal("off").executes(context -> {
                         setOverlay(false);
-                        context.getSource().sendFeedback(Text.literal("ChatCraft: in-game overlay disabled"));
+                        success(context.getSource(), "In-game overlay disabled");
                         return 1;
                     })))
                 .then(ClientCommandManager.literal("event")
                     .then(ClientCommandManager.literal("follow").executes(context -> {
                         ChatCraftClient.eventSub().testFollow();
-                        context.getSource().sendFeedback(Text.literal("ChatCraft: follow test queued"));
+                        success(context.getSource(), "Follow test queued");
                         return 1;
                     }))
                     .then(ClientCommandManager.literal("sub").executes(context -> {
                         ChatCraftClient.eventSub().testSub();
-                        context.getSource().sendFeedback(Text.literal("ChatCraft: subscription test queued"));
+                        success(context.getSource(), "Subscription test queued");
                         return 1;
                     })))
                 .then(ClientCommandManager.literal("nick")
@@ -93,18 +98,17 @@ public final class ChatCraftCommands {
                         .then(ClientCommandManager.argument("name", StringArgumentType.word()).executes(context -> {
                             String name = StringArgumentType.getString(context, "name");
                             if (!ClientIdentity.isValidName(name)) {
-                                context.getSource().sendError(Text.literal(
-                                        "ChatCraft: nickname must contain 1-16 letters, numbers, or underscores"));
+                                error(context.getSource(),
+                                        "Nickname must contain 1-16 letters, numbers, or underscores");
                                 return 0;
                             }
                             ChatCraftClient.identity().setNickname(name);
-                            context.getSource().sendFeedback(Text.literal(
-                                    "ChatCraft: client-side nickname set to " + name));
+                            success(context.getSource(), "Nickname set to " + name);
                             return 1;
                         })))
                     .then(ClientCommandManager.literal("clear").executes(context -> {
                         ChatCraftClient.identity().clearNickname();
-                        context.getSource().sendFeedback(Text.literal("ChatCraft: client-side nickname cleared"));
+                        success(context.getSource(), "Nickname reset to the account name");
                         return 1;
                     })))
                 .then(ClientCommandManager.literal("skin")
@@ -112,36 +116,165 @@ public final class ChatCraftCommands {
                         .then(ClientCommandManager.argument("username", StringArgumentType.word()).executes(context -> {
                             String username = StringArgumentType.getString(context, "username");
                             if (!ChatCraftClient.identity().setSkin(username)) {
-                                context.getSource().sendError(Text.literal(
-                                        "ChatCraft: Minecraft username must contain 1-16 letters, numbers, or underscores"));
+                                error(context.getSource(),
+                                        "Minecraft username must contain 1-16 letters, numbers, or underscores");
                                 return 0;
                             }
-                            context.getSource().sendFeedback(Text.literal(
-                                    "ChatCraft: loading skin from " + username + "..."));
+                            info(context.getSource(), "Loading skin from " + username + "...");
                             return 1;
                         })))
                     .then(ClientCommandManager.literal("clear").executes(context -> {
                         ChatCraftClient.identity().clearSkin();
-                        context.getSource().sendFeedback(Text.literal("ChatCraft: client-side skin cleared"));
+                        success(context.getSource(), "Skin reset to the account skin");
                         return 1;
                     })))
         ));
     }
 
-    private static int connect(net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource source,
-                               String platform) {
-        if (!"youtube".equals(platform)) ChatCraftClient.twitch().connect();
-        if (!"twitch".equals(platform)) ChatCraftClient.youtube().connect();
-        source.sendFeedback(Text.literal("ChatCraft: " + platform + " connection requested"));
+    private static int connect(FabricClientCommandSource source, String platform) {
+        if (!"youtube".equals(platform)) {
+            if (ChatCraftClient.twitch().state() == de.tenkayro.chatcraft.twitch.TwitchConnection.State.CONNECTED) {
+                info(source, "Twitch is already connected — " + ChatCraftClient.twitch().detail());
+            } else {
+                ChatCraftClient.twitch().connect();
+                info(source, "Twitch: connecting...");
+                twitchFeedbackDeadline = clientTick + 400;
+            }
+        }
+        if (!"twitch".equals(platform)) {
+            ChatCraftClient.youtube().connect();
+            switch (ChatCraftClient.youtube().state()) {
+                case AUTH_REQUIRED -> error(source, "YouTube: " + ChatCraftClient.youtube().detail());
+                case CONNECTED -> info(source, "YouTube is already connected — " + ChatCraftClient.youtube().detail());
+                default -> {
+                    info(source, "YouTube: looking for a live broadcast...");
+                    youtubeFeedbackDeadline = clientTick + 400;
+                }
+            }
+        }
         return 1;
     }
 
-    private static int disconnect(net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource source,
-                                  String platform) {
-        if (!"youtube".equals(platform)) ChatCraftClient.twitch().disconnect();
-        if (!"twitch".equals(platform)) ChatCraftClient.youtube().disconnect();
-        source.sendFeedback(Text.literal("ChatCraft: " + platform + " disconnected"));
+    private static int disconnect(FabricClientCommandSource source, String platform) {
+        if (!"youtube".equals(platform)) {
+            ChatCraftClient.twitch().disconnect();
+            twitchFeedbackDeadline = 0;
+            success(source, "Twitch disconnected");
+        }
+        if (!"twitch".equals(platform)) {
+            ChatCraftClient.youtube().disconnect();
+            youtubeFeedbackDeadline = 0;
+            success(source, "YouTube disconnected");
+        }
         return 1;
+    }
+
+    public static void tick(MinecraftClient client) {
+        clientTick++;
+        if (client.player == null) return;
+
+        if (twitchFeedbackDeadline > 0) {
+            switch (ChatCraftClient.twitch().state()) {
+                case CONNECTED -> {
+                    notifyPlayer(client, "Twitch connected — " + ChatCraftClient.twitch().detail(), Formatting.GREEN);
+                    twitchFeedbackDeadline = 0;
+                }
+                case ERROR, DISCONNECTED -> {
+                    notifyPlayer(client, "Twitch: " + ChatCraftClient.twitch().detail(), Formatting.RED);
+                    twitchFeedbackDeadline = 0;
+                }
+                case CONNECTING -> {
+                    if (clientTick >= twitchFeedbackDeadline) {
+                        notifyPlayer(client, "Twitch is still connecting — check /cc status", Formatting.YELLOW);
+                        twitchFeedbackDeadline = 0;
+                    }
+                }
+            }
+        }
+
+        if (youtubeFeedbackDeadline > 0) {
+            switch (ChatCraftClient.youtube().state()) {
+                case CONNECTED -> {
+                    notifyPlayer(client, ChatCraftClient.youtube().detail(), Formatting.GREEN);
+                    youtubeFeedbackDeadline = 0;
+                }
+                case WAITING -> {
+                    notifyPlayer(client, "YouTube: " + ChatCraftClient.youtube().detail(), Formatting.YELLOW);
+                    youtubeFeedbackDeadline = 0;
+                }
+                case ERROR, AUTH_REQUIRED, DISCONNECTED -> {
+                    notifyPlayer(client, "YouTube: " + ChatCraftClient.youtube().detail(), Formatting.RED);
+                    youtubeFeedbackDeadline = 0;
+                }
+                case CONNECTING -> {
+                    if (clientTick >= youtubeFeedbackDeadline) {
+                        notifyPlayer(client, "YouTube is still connecting — check /cc status", Formatting.YELLOW);
+                        youtubeFeedbackDeadline = 0;
+                    }
+                }
+            }
+        }
+    }
+
+    private static int showHelp(FabricClientCommandSource source) {
+        MutableText help = prefix().append(Text.literal("Quick commands\n").formatted(Formatting.WHITE, Formatting.BOLD))
+                .append(Text.literal("/cc connect [twitch|youtube]").formatted(Formatting.AQUA))
+                .append(Text.literal("  Connect chat\n").formatted(Formatting.GRAY))
+                .append(Text.literal("/cc disconnect [twitch|youtube]").formatted(Formatting.AQUA))
+                .append(Text.literal("  Disconnect chat\n").formatted(Formatting.GRAY))
+                .append(Text.literal("/cc status").formatted(Formatting.AQUA))
+                .append(Text.literal("  Show live status\n").formatted(Formatting.GRAY))
+                .append(Text.literal("/cc controls on|off").formatted(Formatting.AQUA))
+                .append(Text.literal("  Toggle chat control\n").formatted(Formatting.GRAY))
+                .append(Text.literal("/cc overlay on|off").formatted(Formatting.AQUA))
+                .append(Text.literal("  Toggle labels\n").formatted(Formatting.GRAY))
+                .append(Text.literal("/cc nick …  /cc skin …  /cc queue clear").formatted(Formatting.DARK_AQUA));
+        source.sendFeedback(help);
+        return 1;
+    }
+
+    private static int showStatus(FabricClientCommandSource source) {
+        ChatCraftConfig config = ChatCraftConfig.get();
+        MutableText status = prefix().append(Text.literal("Live status\n").formatted(Formatting.WHITE, Formatting.BOLD))
+                .append(statusLine("Twitch", ChatCraftClient.twitch().detail(),
+                        ChatCraftClient.twitch().state() == de.tenkayro.chatcraft.twitch.TwitchConnection.State.CONNECTED))
+                .append(statusLine("YouTube", ChatCraftClient.youtube().detail(),
+                        ChatCraftClient.youtube().state() == de.tenkayro.chatcraft.youtube.YouTubeConnection.State.CONNECTED))
+                .append(Text.literal("Controls: ").formatted(Formatting.GRAY))
+                .append(Text.literal(config.controlsEnabled ? "ON" : "OFF")
+                        .formatted(config.controlsEnabled ? Formatting.GREEN : Formatting.RED))
+                .append(Text.literal("  •  Overlay: ").formatted(Formatting.DARK_GRAY))
+                .append(Text.literal(config.overlayEnabled ? "ON" : "OFF")
+                        .formatted(config.overlayEnabled ? Formatting.GREEN : Formatting.RED))
+                .append(Text.literal("  •  Queue: " + ChatCraftClient.queue().size()).formatted(Formatting.GRAY));
+        source.sendFeedback(status);
+        return 1;
+    }
+
+    private static MutableText statusLine(String platform, String detail, boolean connected) {
+        return Text.literal(platform + ": ").formatted(Formatting.GRAY)
+                .append(Text.literal(detail).formatted(connected ? Formatting.GREEN : Formatting.YELLOW))
+                .append(Text.literal("\n"));
+    }
+
+    private static MutableText prefix() {
+        return Text.literal("[ChatCraft] ").formatted(Formatting.GOLD);
+    }
+
+    private static void success(FabricClientCommandSource source, String message) {
+        source.sendFeedback(prefix().append(Text.literal(message).formatted(Formatting.GREEN)));
+    }
+
+    private static void info(FabricClientCommandSource source, String message) {
+        source.sendFeedback(prefix().append(Text.literal(message).formatted(Formatting.AQUA)));
+    }
+
+    private static void error(FabricClientCommandSource source, String message) {
+        source.sendError(prefix().append(Text.literal(message).formatted(Formatting.RED)));
+    }
+
+    private static void notifyPlayer(MinecraftClient client, String message, Formatting color) {
+        client.player.sendMessage(prefix().append(Text.literal(message).formatted(color)), false);
     }
 
     private static void setControls(boolean enabled) {

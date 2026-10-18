@@ -16,6 +16,7 @@ import net.minecraft.text.PlainTextContent;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextContent;
 import net.minecraft.text.TranslatableTextContent;
+import net.minecraft.util.Formatting;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -36,6 +37,10 @@ public final class ClientIdentity {
     private final ActivityLog activity;
     private final AtomicLong skinRequest = new AtomicLong();
     private volatile GameProfile skinProfile;
+    private volatile String loadedSkinUsername = "";
+    private Object appliedPlayer;
+    private PlayerListEntry appliedEntry;
+    private int profileCheckTicks;
 
     public ClientIdentity(ActivityLog activity) {
         this.activity = activity;
@@ -63,9 +68,17 @@ public final class ClientIdentity {
         activity.info("Identity", "Client-side nickname cleared");
     }
 
-    public void loadConfiguredSkin() {
-        String username = ChatCraftConfig.get().clientSkinUsername;
-        if (!username.isBlank()) loadSkin(username, false);
+    public void onWorldJoin() {
+        String configuredUsername = ChatCraftConfig.get().clientSkinUsername;
+        if (configuredUsername.isBlank()) {
+            skinProfile = null;
+            loadedSkinUsername = "";
+            refreshLocalProfile();
+        } else if (skinProfile == null || !configuredUsername.equalsIgnoreCase(loadedSkinUsername)) {
+            loadSkin(configuredUsername, false);
+        } else {
+            refreshLocalProfile();
+        }
     }
 
     public boolean setSkin(String username) {
@@ -77,6 +90,7 @@ public final class ClientIdentity {
     public void clearSkin() {
         skinRequest.incrementAndGet();
         skinProfile = null;
+        loadedSkinUsername = "";
         ChatCraftConfig config = ChatCraftConfig.get();
         config.clientSkinUsername = "";
         config.save();
@@ -96,6 +110,39 @@ public final class ClientIdentity {
         if (nickname.isBlank() || accountName.isBlank() || nickname.equals(accountName)
                 || !message.getString().contains(accountName)) return message;
         return rewriteText(message, accountName, nickname);
+    }
+
+    public void tick(MinecraftClient client) {
+        if (client.player == null || client.getNetworkHandler() == null) {
+            appliedPlayer = null;
+            appliedEntry = null;
+            return;
+        }
+        if (nickname().isBlank() && skinProfile == null) return;
+
+        PlayerListEntry currentEntry = client.getNetworkHandler().getPlayerListEntry(client.player.getUuid());
+        if (client.player != appliedPlayer || currentEntry != appliedEntry) {
+            refreshLocalProfile();
+            profileCheckTicks = 0;
+            return;
+        }
+        if (++profileCheckTicks >= 20) {
+            profileCheckTicks = 0;
+            if (!isApplied(client.player.getGameProfile())
+                    || (currentEntry != null && !isApplied(currentEntry.getProfile()))) {
+                refreshLocalProfile();
+            }
+        }
+    }
+
+    private boolean isApplied(GameProfile profile) {
+        if (profile == null) return false;
+        String expectedName = nickname().isBlank()
+                ? MinecraftClient.getInstance().getSession().getUsername() : nickname();
+        if (!expectedName.equals(profile.getName())) return false;
+        GameProfile selectedSkin = skinProfile;
+        return selectedSkin == null || profile.getProperties().get("textures")
+                .equals(selectedSkin.getProperties().get("textures"));
     }
 
     private static MutableText rewriteText(Text source, String accountName, String nickname) {
@@ -145,11 +192,12 @@ public final class ClientIdentity {
                     if (error != null || loaded == null || loaded.textures == null) {
                         Throwable cause = unwrap(error);
                         activity.error("Identity", "Could not load skin for " + username, cause);
-                        notifyPlayer("ChatCraft: could not load skin for " + username + " ("
-                                + safeMessage(cause) + ")");
+                        notifyPlayer("Could not load skin for " + username + " ("
+                                + safeMessage(cause) + ")", Formatting.RED);
                         return;
                     }
                     skinProfile = loaded.profile;
+                    loadedSkinUsername = username;
                     if (persistOnSuccess) {
                         ChatCraftConfig config = ChatCraftConfig.get();
                         config.clientSkinUsername = username;
@@ -157,7 +205,7 @@ public final class ClientIdentity {
                     }
                     refreshLocalProfile();
                     activity.info("Identity", "Client-side skin loaded from " + username);
-                    notifyPlayer("ChatCraft: skin set from " + username);
+                    notifyPlayer("Skin set from " + username, Formatting.GREEN);
                 }));
     }
 
@@ -188,6 +236,8 @@ public final class ClientIdentity {
             accessor.chatcraft$setTexturesSupplier(
                     client.getSkinProvider().getSkinTexturesSupplier(effectiveProfile));
         }
+        appliedPlayer = client.player;
+        appliedEntry = entry;
     }
 
     private static GameProfile parseProfile(HttpResponse<String> response, String requestedName) {
@@ -229,9 +279,12 @@ public final class ClientIdentity {
         return error.getMessage();
     }
 
-    private static void notifyPlayer(String message) {
+    private static void notifyPlayer(String message, Formatting color) {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player != null) client.player.sendMessage(Text.literal(message), false);
+        if (client.player != null) client.player.sendMessage(
+                Text.literal("[ChatCraft] ").formatted(Formatting.GOLD)
+                        .append(Text.literal(message).formatted(color)),
+                false);
     }
 
     public static boolean isValidName(String value) {

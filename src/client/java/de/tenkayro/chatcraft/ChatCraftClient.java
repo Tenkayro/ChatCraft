@@ -60,11 +60,12 @@ public final class ChatCraftClient implements ClientModInitializer {
         dashboard = new ChatCraftDashboardServer(activity);
         identity = new ClientIdentity(activity);
         dashboard.start();
-        identity.loadConfiguredSkin();
         ScreenOverlayRenderer.register();
         ClientLifecycleEvents.CLIENT_STARTED.register(CustomCursor::install);
         ClientTickEvents.END_CLIENT_TICK.register(input::tick);
         ClientTickEvents.END_CLIENT_TICK.register(backgroundMode::tick);
+        ClientTickEvents.END_CLIENT_TICK.register(identity::tick);
+        ClientTickEvents.END_CLIENT_TICK.register(ChatCraftCommands::tick);
         ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> identity.rewriteLocalName(message));
         ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signedMessage, sender, params, timestamp) -> {
             if (sender == null || !identity.isLocalProfile(sender)) return true;
@@ -74,7 +75,7 @@ public final class ChatCraftClient implements ClientModInitializer {
             return false;
         });
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            identity.refreshLocalProfile();
+            identity.onWorldJoin();
             if (client.player != null) client.player.sendMessage(dashboardMessage(), false);
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> input.releaseAll());
