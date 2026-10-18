@@ -24,11 +24,21 @@ function setMessage(text, kind = "") {
   node.className = `message ${kind}`;
 }
 
+function setYoutubeMessage(text, kind = "") {
+  const node = $("youtubeOauthMessage");
+  node.textContent = text;
+  node.className = `message ${kind}`;
+}
+
 function renderStatus(data) {
   const state = data.twitchState || "DISCONNECTED";
-  $("connectionBadge").textContent = state;
-  $("connectionBadge").className = `badge ${state === "CONNECTED" ? "connected" : state === "ERROR" ? "error" : "neutral"}`;
+  const youtubeState = data.youtubeState || "DISCONNECTED";
+  const connected = [state, youtubeState].filter((item) => item === "CONNECTED").length;
+  const hasError = [state, youtubeState].includes("ERROR");
+  $("connectionBadge").textContent = `${connected}/2 connected`;
+  $("connectionBadge").className = `badge ${connected === 2 ? "connected" : hasError ? "error" : "neutral"}`;
   $("connectionText").textContent = state;
+  $("youtubeConnectionText").textContent = youtubeState;
   $("queueText").textContent = data.queueSize;
   $("usernameText").textContent = data.username || "Not configured";
   $("controlsText").textContent = data.controlsEnabled ? "Enabled" : "Disabled";
@@ -39,6 +49,10 @@ function renderStatus(data) {
   $("connectionDetail").textContent = eventState === "AUTH_REQUIRED"
     ? `${data.twitchDetail} · ${data.eventSubDetail}`
     : data.twitchDetail;
+  $("youtubeConnectionDetail").textContent = data.youtubeDetail;
+  $("youtubeTokenStatus").textContent = data.youtubeTokenConfigured ? "Configured" : "Not configured";
+  $("youtubeRedirectUrl").textContent = data.youtubeRedirectUrl;
+  if (!$("youtubeClientId").value && data.youtubeClientId) $("youtubeClientId").value = data.youtubeClientId;
   $("redirectUrl").textContent = data.redirectUrl;
   $("lanUrl").textContent = data.lanUrl || "No private LAN address detected";
   $("copyLan").disabled = !data.lanUrl;
@@ -50,6 +64,34 @@ function renderStatus(data) {
   }
   lastEvents = data.events || [];
   renderEvents();
+}
+
+async function readYoutubeOauthCallback() {
+  if (location.pathname !== "/youtube/oauth/callback") return;
+  const params = new URLSearchParams(location.search);
+  if (params.has("error")) {
+    setYoutubeMessage(params.get("error_description") || params.get("error"), "error");
+    history.replaceState(null, "", "/");
+    return;
+  }
+  const code = params.get("code");
+  const state = params.get("state") || "";
+  const expected = sessionStorage.getItem("chatcraft.youtube.oauth.state") || "";
+  history.replaceState(null, "", "/");
+  if (!code || !expected || state !== expected) {
+    setYoutubeMessage("YouTube OAuth state mismatch. Start authorization again.", "error");
+    return;
+  }
+  try {
+    await api("/api/youtube/oauth/token", {
+      method: "POST",
+      body: JSON.stringify({ code, state })
+    });
+    sessionStorage.removeItem("chatcraft.youtube.oauth.state");
+    setYoutubeMessage("YouTube authorization saved securely.", "success");
+  } catch (error) {
+    setYoutubeMessage(error.message, "error");
+  }
 }
 
 function fillSettings(settings) {
@@ -194,6 +236,35 @@ $("clearToken").addEventListener("click", async () => {
   } catch (error) { setMessage(error.message, "error"); }
 });
 
+$("youtubeOauthForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = event.submitter;
+  button.disabled = true;
+  try {
+    const data = await api("/api/youtube/oauth/start", {
+      method: "POST",
+      body: JSON.stringify({
+        clientId: $("youtubeClientId").value.trim(),
+        clientSecret: $("youtubeClientSecret").value.trim()
+      })
+    });
+    sessionStorage.setItem("chatcraft.youtube.oauth.state", data.state);
+    location.assign(data.url);
+  } catch (error) {
+    setYoutubeMessage(error.message, "error");
+    button.disabled = false;
+  }
+});
+
+$("clearYoutubeToken").addEventListener("click", async () => {
+  if (!confirm("Remove the saved YouTube tokens and disconnect ChatCraft?")) return;
+  try {
+    await api("/api/youtube/token/clear", { method: "POST", body: "{}" });
+    setYoutubeMessage("Saved YouTube tokens removed.", "success");
+    await refresh();
+  } catch (error) { setYoutubeMessage(error.message, "error"); }
+});
+
 $("settingsForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const button = event.submitter;
@@ -239,6 +310,10 @@ $("copyRedirect").addEventListener("click", async () => {
   await navigator.clipboard.writeText($("redirectUrl").textContent);
   $("copyRedirect").textContent = "Copied";
 });
+$("copyYoutubeRedirect").addEventListener("click", async () => {
+  await navigator.clipboard.writeText($("youtubeRedirectUrl").textContent);
+  $("copyYoutubeRedirect").textContent = "Copied";
+});
 $("copyLan").addEventListener("click", async () => {
   const url = $("lanUrl").textContent;
   if (!url.startsWith("https://")) return;
@@ -266,6 +341,8 @@ async function control(action) {
 }
 $("connectButton").addEventListener("click", () => control("connect"));
 $("disconnectButton").addEventListener("click", () => control("disconnect"));
+$("youtubeConnectButton").addEventListener("click", () => control("youtubeConnect"));
+$("youtubeDisconnectButton").addEventListener("click", () => control("youtubeDisconnect"));
 
 for (const button of document.querySelectorAll(".rule-button")) {
   button.addEventListener("click", async () => {
@@ -310,5 +387,5 @@ for (const button of document.querySelectorAll(".event-test")) {
 }
 
 readOauthCallback();
-refresh();
+readYoutubeOauthCallback().then(refresh);
 setInterval(refresh, 1500);

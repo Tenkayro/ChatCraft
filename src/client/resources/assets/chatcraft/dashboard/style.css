@@ -36,7 +36,7 @@ a:hover { text-decoration-color: var(--text); }
 .badge.error { color: var(--danger); }
 .badge.error::before { background: var(--danger); }
 
-.stats { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 16px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; }
+.stats { display: grid; grid-template-columns: repeat(5, 1fr); margin-bottom: 16px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; }
 .stats article { min-width: 0; padding: 18px; background: var(--surface); border-right: 1px solid var(--line); }
 .stats article:last-child { border-right: 0; }
 .stats span { display: block; margin-bottom: 5px; color: var(--muted); font-size: 11px; }

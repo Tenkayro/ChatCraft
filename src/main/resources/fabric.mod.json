@@ -3,7 +3,7 @@
 	"id": "chatcraft",
 	"version": "${version}",
 	"name": "ChatCraft",
-	"description": "Lets Twitch chat directly control the Minecraft client.",
+	"description": "Lets Twitch and YouTube chat directly control the Minecraft client.",
 	"authors": [
 		"tenkayro"
 	],

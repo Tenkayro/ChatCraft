@@ -53,6 +53,8 @@ public final class ChatCraftDashboardServer {
     private volatile InetAddress lanAddress;
     private volatile String oauthState = "";
     private volatile long oauthExpiresAt;
+    private volatile String youtubeOauthState = "";
+    private volatile long youtubeOauthExpiresAt;
     private volatile String detail = "Not started";
 
     public ChatCraftDashboardServer(ActivityLog activity) {
@@ -113,11 +115,14 @@ public final class ChatCraftDashboardServer {
         return address == null ? "" : "https://" + address.getHostAddress() + ":" + activePort;
     }
     public String redirectUrl() { return baseUrl() + "/oauth/callback"; }
+    public String youtubeRedirectUrl() { return baseUrl() + "/youtube/oauth/callback"; }
 
     public synchronized void restart() {
         stop();
         oauthState = "";
         oauthExpiresAt = 0;
+        youtubeOauthState = "";
+        youtubeOauthExpiresAt = 0;
         start();
     }
 
@@ -129,7 +134,7 @@ public final class ChatCraftDashboardServer {
             }
             String path = exchange.getRequestURI().getPath();
             switch (path) {
-                case "/", "/oauth/callback" -> serveDashboard(exchange);
+                case "/", "/oauth/callback", "/youtube/oauth/callback" -> serveDashboard(exchange);
                 case "/obs" -> serveResource(exchange, "/assets/chatcraft/dashboard/obs.html", "text/html; charset=utf-8");
                 case "/obs.js" -> serveResource(exchange, "/assets/chatcraft/dashboard/obs.js", "text/javascript; charset=utf-8");
                 case "/obs.css" -> serveResource(exchange, "/assets/chatcraft/dashboard/obs.css", "text/css; charset=utf-8");
@@ -140,6 +145,9 @@ public final class ChatCraftDashboardServer {
                 case "/api/status" -> status(exchange);
                 case "/api/oauth/start" -> startOauth(exchange);
                 case "/api/oauth/token" -> saveOauthToken(exchange);
+                case "/api/youtube/oauth/start" -> startYoutubeOauth(exchange);
+                case "/api/youtube/oauth/token" -> saveYoutubeOauthToken(exchange);
+                case "/api/youtube/token/clear" -> clearYoutubeToken(exchange);
                 case "/api/settings" -> saveSettings(exchange);
                 case "/api/gamerule" -> applyGameRule(exchange);
                 case "/api/event/test" -> testEvent(exchange);
@@ -181,6 +189,11 @@ public final class ChatCraftDashboardServer {
         payload.put("clientId", config.twitchClientId);
         payload.put("tokenConfigured", !config.oauthToken.isBlank());
         payload.put("redirectUrl", redirectUrl());
+        payload.put("youtubeState", ChatCraftClient.youtube().state().name());
+        payload.put("youtubeDetail", ChatCraftClient.youtube().detail());
+        payload.put("youtubeClientId", config.youtubeClientId);
+        payload.put("youtubeTokenConfigured", !config.youtubeRefreshToken.isBlank());
+        payload.put("youtubeRedirectUrl", youtubeRedirectUrl());
         payload.put("lanUrl", lanUrl());
         payload.put("obsUrl", (lanUrl().isBlank() ? baseUrl() : lanUrl()) + "/obs");
         payload.put("settings", settingsPayload(config));
@@ -248,6 +261,20 @@ public final class ChatCraftDashboardServer {
         sendJson(exchange, 200, Map.of("ok", true));
     }
 
+    private void clearYoutubeToken(HttpExchange exchange) throws IOException {
+        if (!authorizedPost(exchange)) return;
+        ChatCraftClient.youtube().disconnect();
+        ChatCraftConfig config = ChatCraftConfig.get();
+        synchronized (config) {
+            config.youtubeAccessToken = "";
+            config.youtubeRefreshToken = "";
+            config.youtubeAccessTokenExpiresAt = 0;
+            config.save();
+        }
+        activity.add("system", "", "", "YouTube OAuth", "tokens cleared");
+        sendJson(exchange, 200, Map.of("ok", true));
+    }
+
     private void startOauth(HttpExchange exchange) throws IOException {
         if (!authorizedPost(exchange)) return;
         JsonObject request = readJson(exchange);
@@ -303,12 +330,94 @@ public final class ChatCraftDashboardServer {
             "expiresIn", validated.expiresIn()));
     }
 
+    private void startYoutubeOauth(HttpExchange exchange) throws IOException {
+        if (!authorizedPost(exchange)) return;
+        JsonObject request = readJson(exchange);
+        String clientId = string(request, "clientId").trim();
+        String clientSecret = string(request, "clientSecret").trim();
+        if (!clientId.endsWith(".apps.googleusercontent.com") || clientId.length() > 256
+                || clientSecret.isBlank() || clientSecret.length() > 256) {
+            sendJson(exchange, 400, Map.of("error", "Enter a valid Google OAuth Client ID and Client Secret"));
+            return;
+        }
+        youtubeOauthState = randomHex(24);
+        youtubeOauthExpiresAt = System.currentTimeMillis() + OAUTH_LIFETIME_MILLIS;
+        ChatCraftConfig config = ChatCraftConfig.get();
+        synchronized (config) {
+            config.youtubeClientId = clientId;
+            config.youtubeClientSecret = clientSecret;
+            config.save();
+        }
+        String url = "https://accounts.google.com/o/oauth2/v2/auth?response_type=code"
+                + "&client_id=" + encode(clientId)
+                + "&redirect_uri=" + encode(youtubeRedirectUrl())
+                + "&scope=" + encode("https://www.googleapis.com/auth/youtube.readonly")
+                + "&access_type=offline&prompt=consent&include_granted_scopes=true"
+                + "&state=" + encode(youtubeOauthState);
+        sendJson(exchange, 200, Map.of("url", url, "state", youtubeOauthState));
+    }
+
+    private void saveYoutubeOauthToken(HttpExchange exchange) throws IOException, InterruptedException {
+        if (!authorizedPost(exchange)) return;
+        JsonObject request = readJson(exchange);
+        String code = string(request, "code");
+        String state = string(request, "state");
+        if (code.isBlank() || System.currentTimeMillis() > youtubeOauthExpiresAt
+                || youtubeOauthState.isBlank() || !constantTimeEquals(youtubeOauthState, state)) {
+            sendJson(exchange, 400, Map.of("error", "YouTube OAuth response is invalid or expired"));
+            return;
+        }
+        ChatCraftConfig config = ChatCraftConfig.get();
+        String body = "code=" + encode(code)
+                + "&client_id=" + encode(config.youtubeClientId)
+                + "&client_secret=" + encode(config.youtubeClientSecret)
+                + "&redirect_uri=" + encode(youtubeRedirectUrl())
+                + "&grant_type=authorization_code";
+        HttpRequest tokenRequest = HttpRequest.newBuilder(URI.create("https://oauth2.googleapis.com/token"))
+                .timeout(Duration.ofSeconds(20))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+        HttpResponse<String> response = httpClient.send(tokenRequest, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() / 100 != 2) {
+            sendJson(exchange, 400, Map.of("error", "Google rejected the authorization code"));
+            return;
+        }
+        JsonObject token = JsonParser.parseString(response.body()).getAsJsonObject();
+        String accessToken = string(token, "access_token");
+        String refreshToken = string(token, "refresh_token");
+        if (accessToken.isBlank() || refreshToken.isBlank()) {
+            sendJson(exchange, 400, Map.of("error", "Google did not return an offline refresh token; authorize again"));
+            return;
+        }
+        synchronized (config) {
+            config.youtubeAccessToken = accessToken;
+            config.youtubeRefreshToken = refreshToken;
+            config.youtubeAccessTokenExpiresAt = System.currentTimeMillis()
+                    + (token.has("expires_in") ? token.get("expires_in").getAsLong() * 1000 : 3_600_000);
+            config.save();
+        }
+        youtubeOauthState = "";
+        youtubeOauthExpiresAt = 0;
+        activity.add("system", "", "", "YouTube OAuth", "authorization saved");
+        sendJson(exchange, 200, Map.of("ok", true));
+    }
+
     private void control(HttpExchange exchange) throws IOException {
         if (!authorizedPost(exchange)) return;
         String action = string(readJson(exchange), "action");
         switch (action) {
             case "connect" -> ChatCraftClient.twitch().connect();
             case "disconnect" -> ChatCraftClient.twitch().disconnect();
+            case "youtubeConnect" -> ChatCraftClient.youtube().connect();
+            case "youtubeDisconnect" -> ChatCraftClient.youtube().disconnect();
+            case "connectAll" -> {
+                ChatCraftClient.twitch().connect();
+                ChatCraftClient.youtube().connect();
+            }
+            case "disconnectAll" -> {
+                ChatCraftClient.twitch().disconnect();
+                ChatCraftClient.youtube().disconnect();
+            }
             default -> {
                 sendJson(exchange, 400, Map.of("error", "Unknown control action"));
                 return;
@@ -433,6 +542,7 @@ public final class ChatCraftDashboardServer {
     private static Map<String, Object> settingsPayload(ChatCraftConfig config) {
         Map<String, Object> settings = new LinkedHashMap<>();
         settings.put("username", config.username);
+        settings.put("youtubeClientId", config.youtubeClientId);
         settings.put("commandPrefix", config.commandPrefix);
         settings.put("controlsEnabled", config.controlsEnabled);
         settings.put("overlayEnabled", config.overlayEnabled);
@@ -469,7 +579,7 @@ public final class ChatCraftDashboardServer {
         headers.set("X-Frame-Options", "DENY");
         headers.set("Referrer-Policy", "no-referrer");
         headers.set("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' https://cdn.7tv.app https://static-cdn.jtvnw.net; "
-            + "style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; form-action https://id.twitch.tv");
+            + "style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; form-action https://id.twitch.tv https://accounts.google.com");
         exchange.sendResponseHeaders(status, bytes.length);
         exchange.getResponseBody().write(bytes);
     }

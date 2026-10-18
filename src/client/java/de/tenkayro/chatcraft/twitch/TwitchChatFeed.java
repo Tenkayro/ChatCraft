@@ -28,13 +28,17 @@ public final class TwitchChatFeed {
     }
 
     public void accept(String user, String message, int color) {
+        accept(user, message, color, "Twitch");
+    }
+
+    public void accept(String user, String message, int color, String source) {
         synchronized (messages) {
-            messages.addLast(new Message(System.currentTimeMillis(), user, message, color));
+            messages.addLast(new Message(System.currentTimeMillis(), user, message, color, source));
             while (messages.size() > MAX_MESSAGES) messages.removeFirst();
         }
         MinecraftClient client = MinecraftClient.getInstance();
         client.execute(() -> {
-            if (client.inGameHud != null) client.inGameHud.getChatHud().addMessage(format(user, message, color));
+            if (client.inGameHud != null) client.inGameHud.getChatHud().addMessage(format(user, message, color, source));
         });
     }
 
@@ -47,6 +51,7 @@ public final class TwitchChatFeed {
                 item.put("user", message.user);
                 item.put("message", message.text);
                 item.put("color", String.format("#%06X", message.color));
+                item.put("source", message.source);
                 result.add(item);
             }
         }
@@ -59,8 +64,10 @@ public final class TwitchChatFeed {
         }
     }
 
-    private Text format(String user, String message, int color) {
-        MutableText line = Text.literal(user).styled(style -> style.withColor(color));
+    private Text format(String user, String message, int color, String source) {
+        MutableText line = Text.literal(source.equals("YouTube") ? "[YT] " : "[TW] ")
+                .formatted(Formatting.DARK_GRAY);
+        line.append(Text.literal(user).styled(style -> style.withColor(color)));
         line.append(Text.literal(" \u00BB ").formatted(Formatting.DARK_GRAY));
         Matcher matcher = WORD.matcher(message);
         int position = 0;
@@ -80,5 +87,5 @@ public final class TwitchChatFeed {
         return line;
     }
 
-    private record Message(long timestamp, String user, String text, int color) { }
+    private record Message(long timestamp, String user, String text, int color, String source) { }
 }

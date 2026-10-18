@@ -12,7 +12,7 @@ function render(data) {
   for (const item of (data.chat || []).slice(-8)) {
     const line = document.createElement("div");
     line.className = "line";
-    const name = text(item.user, "name");
+    const name = text(`${item.source === "YouTube" ? "▶ " : ""}${item.user}`, "name");
     name.style.color = item.color || "#9146ff";
     line.append(name);
     line.append(text(" \u00BB ", "separator"));

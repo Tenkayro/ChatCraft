@@ -25,6 +25,14 @@ public final class ChatCraftConfig {
     public String twitchClientId = "";
     public transient String oauthToken = "";
     private String encryptedOauthToken = "";
+    public String youtubeClientId = "";
+    public transient String youtubeClientSecret = "";
+    public transient String youtubeAccessToken = "";
+    public transient String youtubeRefreshToken = "";
+    public long youtubeAccessTokenExpiresAt = 0;
+    private String encryptedYoutubeClientSecret = "";
+    private String encryptedYoutubeAccessToken = "";
+    private String encryptedYoutubeRefreshToken = "";
     public int dashboardPort = 38473;
     public String commandPrefix = "";
     public boolean controlsEnabled = true;
@@ -69,6 +77,9 @@ public final class ChatCraftConfig {
                     } else if (config.encryptedOauthToken != null && !config.encryptedOauthToken.isBlank()) {
                         config.oauthToken = TokenVault.decrypt(config.encryptedOauthToken);
                     }
+                    config.youtubeClientSecret = decrypt(config.encryptedYoutubeClientSecret);
+                    config.youtubeAccessToken = decrypt(config.encryptedYoutubeAccessToken);
+                    config.youtubeRefreshToken = decrypt(config.encryptedYoutubeRefreshToken);
                     config.normalize();
                     if (migrated) config.save();
                     return config;
@@ -86,6 +97,9 @@ public final class ChatCraftConfig {
         normalize();
         try {
             encryptedOauthToken = TokenVault.encrypt(oauthToken);
+            encryptedYoutubeClientSecret = TokenVault.encrypt(youtubeClientSecret);
+            encryptedYoutubeAccessToken = TokenVault.encrypt(youtubeAccessToken);
+            encryptedYoutubeRefreshToken = TokenVault.encrypt(youtubeRefreshToken);
             Files.createDirectories(PATH.getParent());
             Path temporary = PATH.resolveSibling(PATH.getFileName() + ".tmp");
             try (Writer writer = Files.newBufferedWriter(temporary)) {
@@ -109,11 +123,21 @@ public final class ChatCraftConfig {
         if (twitchClientId == null) twitchClientId = "";
         twitchClientId = twitchClientId.trim();
         if (oauthToken == null) oauthToken = "";
+        if (youtubeClientId == null) youtubeClientId = "";
+        youtubeClientId = youtubeClientId.trim();
+        if (youtubeClientSecret == null) youtubeClientSecret = "";
+        youtubeClientSecret = youtubeClientSecret.trim();
+        if (youtubeAccessToken == null) youtubeAccessToken = "";
+        if (youtubeRefreshToken == null) youtubeRefreshToken = "";
         dashboardPort = Math.max(1024, Math.min(65535, dashboardPort));
         if (commandPrefix == null) commandPrefix = "";
         if (whitelist == null) whitelist = new ArrayList<>();
         if (blacklist == null) blacklist = new ArrayList<>();
         movementDurationTicks = Math.max(1, Math.min(200, movementDurationTicks));
         cameraStepDegrees = Math.max(1.0f, Math.min(180.0f, cameraStepDegrees));
+    }
+
+    private static String decrypt(String value) throws Exception {
+        return value == null || value.isBlank() ? "" : TokenVault.decrypt(value);
     }
 }

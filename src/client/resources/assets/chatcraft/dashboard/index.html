@@ -10,11 +10,12 @@
 <body>
   <main>
     <header>
-      <div><h1>ChatCraft</h1><p class="subtitle">Minecraft × Twitch</p></div>
+      <div><h1>ChatCraft</h1><p class="subtitle">Minecraft × Twitch + YouTube</p></div>
       <div id="connectionBadge" class="badge neutral">Loading...</div>
     </header>
     <section class="stats" aria-label="Status">
-      <article><span>Connection</span><strong id="connectionText">Loading...</strong></article>
+      <article><span>Twitch</span><strong id="connectionText">Loading...</strong></article>
+      <article><span>YouTube</span><strong id="youtubeConnectionText">Loading...</strong></article>
       <article><span>Queue</span><strong id="queueText">0</strong></article>
       <article><span>Twitch user</span><strong id="usernameText">Not configured</strong></article>
       <article><span>Controls</span><strong id="controlsText">-</strong></article>
@@ -46,6 +47,30 @@
         <div class="panel-heading"><h2>Connection</h2></div>
         <p id="connectionDetail" class="detail">Loading status...</p>
         <div class="button-row"><button id="connectButton">Connect</button><button id="disconnectButton" class="secondary">Disconnect</button></div>
+      </article>
+    </section>
+    <section class="grid">
+      <article class="panel setup-panel">
+        <div class="panel-heading"><h2>YouTube setup</h2></div>
+        <p class="step"><strong>01</strong> · In Google Cloud, enable the YouTube Data API v3 and create a Web application OAuth client.</p>
+        <p class="step"><strong>02</strong> · Add this exact authorized redirect URI.</p>
+        <div class="copy-row"><code id="youtubeRedirectUrl">Loading...</code><button id="copyYoutubeRedirect" class="secondary">Copy</button></div>
+        <form id="youtubeOauthForm">
+          <label for="youtubeClientId">03 · Google OAuth credentials</label>
+          <div class="form-grid">
+            <input id="youtubeClientId" autocomplete="off" spellcheck="false" placeholder="Client ID" required>
+            <input id="youtubeClientSecret" type="password" autocomplete="off" spellcheck="false" placeholder="Client Secret" required>
+          </div>
+          <div class="button-row"><button type="submit">Authorize YouTube</button></div>
+        </form>
+        <p id="youtubeOauthMessage" class="message" role="status"></p>
+        <div class="token-status-row"><span>Token</span><strong id="youtubeTokenStatus">Checking...</strong><button id="clearYoutubeToken" class="secondary danger">Clear</button></div>
+      </article>
+      <article class="panel control-panel">
+        <div class="panel-heading"><h2>YouTube connection</h2></div>
+        <p id="youtubeConnectionDetail" class="detail">Loading status...</p>
+        <div class="button-row"><button id="youtubeConnectButton">Connect</button><button id="youtubeDisconnectButton" class="secondary">Disconnect</button></div>
+        <p class="muted small">The active broadcast is detected automatically. Existing messages are ignored when connecting, so old commands are never replayed.</p>
       </article>
     </section>
     <section class="panel settings-panel">

@@ -14,6 +14,7 @@ import de.tenkayro.chatcraft.overlay.ScreenOverlayRenderer;
 import de.tenkayro.chatcraft.twitch.TwitchConnection;
 import de.tenkayro.chatcraft.twitch.TwitchEventSub;
 import de.tenkayro.chatcraft.twitch.TwitchChatFeed;
+import de.tenkayro.chatcraft.youtube.YouTubeConnection;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -32,6 +33,7 @@ public final class ChatCraftClient implements ClientModInitializer {
     private static TwitchConnection twitch;
     private static TwitchEventSub eventSub;
     private static TwitchChatFeed chatFeed;
+    private static YouTubeConnection youtube;
     private static InputController input;
     private static BackgroundModeController backgroundMode;
     private static ActivityLog activity;
@@ -47,6 +49,7 @@ public final class ChatCraftClient implements ClientModInitializer {
         chatFeed = new TwitchChatFeed(parser);
         eventSub = new TwitchEventSub(queue, activity);
         twitch = new TwitchConnection(commands, queue, activity, chatFeed, eventSub);
+        youtube = new YouTubeConnection(commands, queue, activity, chatFeed);
         input = new InputController(queue, activity);
         backgroundMode = new BackgroundModeController(input);
         dashboard = new ChatCraftDashboardServer(activity);
@@ -60,12 +63,16 @@ public final class ChatCraftClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> input.releaseAll());
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             twitch.disconnect();
+            youtube.close();
             chatFeed.close();
             input.releaseAll();
             dashboard.stop();
         });
         ChatCraftCommands.register();
-        if (config.autoConnect) twitch.connect();
+        if (config.autoConnect) {
+            twitch.connect();
+            youtube.connect();
+        }
         LOGGER.info("ChatCraft initialized");
     }
 
@@ -74,6 +81,7 @@ public final class ChatCraftClient implements ClientModInitializer {
     public static TwitchConnection twitch() { return twitch; }
     public static TwitchEventSub eventSub() { return eventSub; }
     public static TwitchChatFeed chatFeed() { return chatFeed; }
+    public static YouTubeConnection youtube() { return youtube; }
     public static InputController input() { return input; }
     public static ActivityLog activity() { return activity; }
     public static ChatCraftDashboardServer dashboard() { return dashboard; }
