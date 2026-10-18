@@ -98,10 +98,14 @@ summary::-webkit-details-marker { display: none; }
 .chevron { font-size: 9px; transition: transform .2s ease; }
 details[open] > summary .chevron { transform: rotate(180deg); }
 .details-body { padding-top: 14px; }
-.setup-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 7px; color: var(--faint); font-size: 10px; }
-.setup-meta a { color: var(--muted); font-weight: 600; text-decoration: none; }
-.setup-meta a:hover { color: var(--text); }
-.setup-meta a i { margin-left: 4px; font-size: 8px; }
+.setup-launch { display: flex; align-items: center; gap: 10px; margin-bottom: 13px; }
+.setup-launch p { margin: 0; color: var(--faint); font-size: 10px; line-height: 1.35; }
+.developer-link { display: inline-flex; min-height: 34px; flex: 0 0 auto; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--surface-2); color: var(--text); font-size: 11px; font-weight: 650; text-decoration: none; transition: border-color .15s ease, background .15s ease; }
+.developer-link:hover { border-color: #4b5260; background: var(--surface-3); }
+.developer-link > i:last-child { color: var(--faint); font-size: 8px; }
+.twitch-link > i:first-child { color: #a970ff; }
+.youtube-link > i:first-child { color: #ff4c4c; }
+.redirect-label { margin-bottom: 6px; }
 
 label { display: block; color: var(--muted); font-size: 11px; font-weight: 550; }
 label > small { float: right; color: var(--faint); font-weight: 450; }
@@ -234,6 +238,7 @@ button.console-filter.active { border-bottom-color: var(--accent); background: t
 
 @media (max-width: 480px) {
   h1 { font-size: 30px; }
+  .setup-launch { align-items: flex-start; flex-direction: column; }
   .compact-actions { width: 100%; }
   .compact-actions button { flex: 1; }
   .platform-card, .settings-group, .lower-tools > .panel { padding: 16px; }

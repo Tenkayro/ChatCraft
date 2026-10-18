@@ -55,7 +55,11 @@
             <details id="twitchSetup" class="setup-guide" open>
               <summary><span><i class="fa-solid fa-key"></i> Credentials</span><i class="fa-solid fa-chevron-down chevron"></i></summary>
               <div class="details-body">
-                <div class="setup-meta"><a href="https://dev.twitch.tv/console/apps/create" target="_blank" rel="noreferrer">Twitch Developer Console <i class="fa-solid fa-arrow-up-right-from-square"></i></a><span>OAuth redirect URL</span></div>
+                <div class="setup-launch">
+                  <a class="developer-link twitch-link" href="https://dev.twitch.tv/console/apps/create" target="_blank" rel="noreferrer"><i class="fa-brands fa-twitch"></i><span>Open Twitch Console</span><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                  <p>Create a public Chat Bot app.</p>
+                </div>
+                <label class="redirect-label">OAuth redirect URL</label>
                 <div class="copy-row"><code id="redirectUrl">Loading…</code><button id="copyRedirect" class="icon-button secondary" title="Copy" aria-label="Copy Twitch redirect URL"><i class="fa-regular fa-copy"></i></button></div>
                 <form id="oauthForm">
                   <div class="form-grid credential-grid">
@@ -84,7 +88,11 @@
             <details id="youtubeSetup" class="setup-guide" open>
               <summary><span><i class="fa-solid fa-key"></i> Credentials</span><i class="fa-solid fa-chevron-down chevron"></i></summary>
               <div class="details-body">
-                <div class="setup-meta"><a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer">Google Cloud Console <i class="fa-solid fa-arrow-up-right-from-square"></i></a><span>Authorized redirect URI</span></div>
+                <div class="setup-launch">
+                  <a class="developer-link youtube-link" href="https://console.cloud.google.com/" target="_blank" rel="noreferrer"><i class="fa-brands fa-google"></i><span>Open Google Cloud</span><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                  <p>Enable YouTube Data API v3 · Create an OAuth web client.</p>
+                </div>
+                <label class="redirect-label">Authorized redirect URI</label>
                 <div class="copy-row"><code id="youtubeRedirectUrl">Loading…</code><button id="copyYoutubeRedirect" class="icon-button secondary" title="Copy" aria-label="Copy YouTube redirect URL"><i class="fa-regular fa-copy"></i></button></div>
                 <form id="youtubeOauthForm">
                   <div class="form-grid credential-grid">
