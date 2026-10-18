@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="/style.css">
 </head>
-<body>
+<body data-view="overview">
   <div class="app-shell">
     <aside class="sidebar">
       <a class="brand" href="#overview" aria-label="ChatCraft home">
@@ -23,7 +23,7 @@
         <a href="#activity"><i class="fa-solid fa-list-ul"></i><span>Activity</span></a>
         <a href="#console"><i class="fa-solid fa-terminal"></i><span>Console</span></a>
       </nav>
-      <div class="sidebar-foot"><span class="pulse"></span> Minecraft is running</div>
+      <div class="sidebar-foot"><span class="pulse"></span> Online</div>
     </aside>
 
     <main>
@@ -52,7 +52,7 @@
               <span id="connectionText" class="state-pill">Loading</span>
             </div>
             <div class="button-row"><button id="connectButton"><i class="fa-solid fa-play"></i> Connect</button><button id="disconnectButton" class="secondary"><i class="fa-solid fa-stop"></i> Disconnect</button></div>
-            <details id="twitchSetup" class="setup-guide" open>
+            <details id="twitchSetup" class="setup-guide">
               <summary><span><i class="fa-solid fa-key"></i> Credentials</span><i class="fa-solid fa-chevron-down chevron"></i></summary>
               <div class="details-body">
                 <div class="setup-launch">
@@ -85,7 +85,7 @@
               <span id="youtubeConnectionText" class="state-pill">Loading</span>
             </div>
             <div class="button-row"><button id="youtubeConnectButton"><i class="fa-solid fa-play"></i> Connect</button><button id="youtubeDisconnectButton" class="secondary"><i class="fa-solid fa-stop"></i> Disconnect</button></div>
-            <details id="youtubeSetup" class="setup-guide" open>
+            <details id="youtubeSetup" class="setup-guide">
               <summary><span><i class="fa-solid fa-key"></i> Credentials</span><i class="fa-solid fa-chevron-down chevron"></i></summary>
               <div class="details-body">
                 <div class="setup-launch">

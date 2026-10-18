@@ -10,6 +10,26 @@ let settingsLoaded = false;
 let refreshRunning = false;
 let consecutiveRefreshFailures = 0;
 const recentDiagnostics = new Map();
+const views = new Set(["overview", "connections", "settings", "tools", "activity", "console"]);
+
+function activateView() {
+  const requested = location.hash.slice(1);
+  const view = views.has(requested) ? requested : "overview";
+  document.body.dataset.view = view;
+  for (const link of document.querySelectorAll(".sidebar nav a")) {
+    const active = link.getAttribute("href") === `#${view}`;
+    link.classList.toggle("active", active);
+    if (active) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  }
+  document.title = view === "overview"
+    ? "ChatCraft"
+    : `${view[0].toUpperCase()}${view.slice(1)} · ChatCraft`;
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+window.addEventListener("hashchange", activateView);
+activateView();
 
 const stateLabels = {
   CONNECTED: "Connected",
@@ -134,16 +154,19 @@ function renderStatus(data) {
 
 async function readYoutubeOauthCallback() {
   if (location.pathname !== "/youtube/oauth/callback") return;
+  $("youtubeSetup").open = true;
   const params = new URLSearchParams(location.search);
   if (params.has("error")) {
     setYoutubeMessage(params.get("error_description") || params.get("error"), "error");
     history.replaceState(null, "", "/");
+    location.hash = "connections";
     return;
   }
   const code = params.get("code");
   const state = params.get("state") || "";
   const expected = sessionStorage.getItem("chatcraft.youtube.oauth.state") || "";
   history.replaceState(null, "", "/");
+  location.hash = "connections";
   if (!code || !expected || state !== expected) {
     setYoutubeMessage("The YouTube authorization no longer matches. Start it again.", "error");
     return;
@@ -339,17 +362,20 @@ async function saveCredentials(platform, button, messageTarget) {
 
 function readOauthCallback() {
   const params = new URLSearchParams(location.hash.slice(1));
+  if (!params.has("error") && !params.has("access_token")) return;
+  $("twitchSetup").open = true;
   if (params.has("error")) {
     setMessage(params.get("error_description") || params.get("error"), "error");
     history.replaceState(null, "", "/oauth/callback");
+    location.hash = "connections";
     return;
   }
-  if (!params.has("access_token")) return;
   const expected = sessionStorage.getItem("chatcraft.oauth.state") || "";
   currentState = params.get("state") || "";
   if (!expected || currentState !== expected) {
     setMessage("The Twitch authorization no longer matches. Start it again.", "error");
     history.replaceState(null, "", "/oauth/callback");
+    location.hash = "connections";
     return;
   }
   currentToken = params.get("access_token");
@@ -358,6 +384,7 @@ function readOauthCallback() {
   $("tokenResult").hidden = false;
   setMessage("Twitch confirmed access. Save the token securely now.", "success");
   history.replaceState(null, "", "/oauth/callback");
+  location.hash = "connections";
 }
 
 $("oauthForm").addEventListener("submit", async (event) => {
