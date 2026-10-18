@@ -39,26 +39,31 @@ public final class StatsOverlayRenderer {
         ClientPlayerEntity player = client.player;
         if (player == null || client.options.hudHidden) return;
 
-        List<StatRow> rows = collectRows(player, ChatCraftConfig.get());
+        ChatCraftConfig config = ChatCraftConfig.get();
+        List<StatRow> rows = collectRows(player, config);
         if (rows.isEmpty()) return;
 
-        int contentWidth = client.textRenderer.getWidth("STATS");
+        boolean showTitle = config.statsTitleVisible && !config.statsTitle.isBlank();
+        int contentWidth = showTitle ? client.textRenderer.getWidth(config.statsTitle) : 0;
         for (StatRow row : rows) {
             contentWidth = Math.max(contentWidth,
                     client.textRenderer.getWidth(row.label) + 14 + client.textRenderer.getWidth(row.value));
         }
 
         int width = contentWidth + PADDING * 2;
-        int height = PADDING * 2 + 9 + 3 + rows.size() * ROW_HEIGHT;
+        int titleHeight = showTitle ? 12 : 0;
+        int height = PADDING * 2 + titleHeight + rows.size() * ROW_HEIGHT;
         int x = client.getWindow().getScaledWidth() - width - 7;
         int y = 28;
 
         context.fill(x, y, x + width, y + height, BACKGROUND);
         context.fill(x, y, x + 2, y + height, ACCENT);
-        context.drawText(client.textRenderer, Text.literal("STATS"), x + PADDING, y + PADDING,
-                VALUE_COLOR, false);
+        if (showTitle) {
+            context.drawText(client.textRenderer, Text.literal(config.statsTitle), x + PADDING, y + PADDING,
+                    VALUE_COLOR, false);
+        }
 
-        int rowY = y + PADDING + 12;
+        int rowY = y + PADDING + titleHeight;
         for (StatRow row : rows) {
             context.drawText(client.textRenderer, row.label, x + PADDING, rowY, LABEL_COLOR, false);
             int valueX = x + width - PADDING - client.textRenderer.getWidth(row.value);
@@ -81,19 +86,19 @@ public final class StatsOverlayRenderer {
         if (config.statsJumps) rows.add(row(player, "Jumps", Stats.JUMP));
         PlatformStatsService platformStats = ChatCraftClient.platformStats();
         if (config.statsTwitchFollowers) {
-            rows.add(new StatRow(platformLabel(TWITCH_ICON, "Followers", 0x9146FF),
+            rows.add(new StatRow(platformLabel(TWITCH_ICON, "Followers"),
                     formatCount(platformStats.twitchFollowers())));
         }
         if (config.statsTwitchViewers) {
-            rows.add(new StatRow(platformLabel(TWITCH_ICON, "Viewers", 0x9146FF),
+            rows.add(new StatRow(platformLabel(TWITCH_ICON, "Viewers"),
                     formatCount(platformStats.twitchViewers())));
         }
         if (config.statsYoutubeSubscribers) {
-            rows.add(new StatRow(platformLabel(YOUTUBE_ICON, "Subscribers", 0xFF0000),
+            rows.add(new StatRow(platformLabel(YOUTUBE_ICON, "Subscribers"),
                     formatCount(platformStats.youtubeSubscribers())));
         }
         if (config.statsYoutubeViewers) {
-            rows.add(new StatRow(platformLabel(YOUTUBE_ICON, "Viewers", 0xFF0000),
+            rows.add(new StatRow(platformLabel(YOUTUBE_ICON, "Viewers"),
                     formatCount(platformStats.youtubeViewers())));
         }
         return rows;
@@ -103,8 +108,9 @@ public final class StatsOverlayRenderer {
         return new StatRow(Text.literal(label), Integer.toString(value(player, statistic)));
     }
 
-    private static Text platformLabel(String icon, String label, int color) {
-        MutableText text = Text.literal(icon).styled(style -> style.withFont(PLATFORM_ICONS_FONT).withColor(color));
+    private static Text platformLabel(String icon, String label) {
+        MutableText text = Text.empty();
+        text.append(Text.literal(icon).styled(style -> style.withFont(PLATFORM_ICONS_FONT).withColor(0xFFFFFF)));
         return text.append(Text.literal(" " + label).styled(style -> style.withColor(LABEL_COLOR & 0xFFFFFF)));
     }
 

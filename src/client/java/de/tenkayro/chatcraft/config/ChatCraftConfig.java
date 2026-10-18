@@ -57,6 +57,8 @@ public final class ChatCraftConfig {
     public boolean statsTwitchViewers = false;
     public boolean statsYoutubeSubscribers = false;
     public boolean statsYoutubeViewers = false;
+    public String statsTitle = "STATS";
+    public boolean statsTitleVisible = true;
     public List<String> whitelist = new ArrayList<>();
     public List<String> blacklist = new ArrayList<>();
 
@@ -151,6 +153,9 @@ public final class ChatCraftConfig {
         clientNickname = clientNickname.trim();
         if (clientSkinUsername == null) clientSkinUsername = "";
         clientSkinUsername = clientSkinUsername.trim();
+        if (statsTitle == null || statsTitle.isBlank()) statsTitle = "STATS";
+        statsTitle = statsTitle.trim();
+        if (statsTitle.length() > 32) statsTitle = statsTitle.substring(0, 32);
     }
 
     private static String decrypt(String value) throws Exception {

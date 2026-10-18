@@ -55,6 +55,21 @@ public final class ChatCraftCommands {
                         .then(platformStatsToggle("youtube", "subscribers"))
                         .then(platformStatsToggle("youtube", "followers"))
                         .then(platformStatsToggle("youtube", "viewers")))
+                    .then(ClientCommandManager.literal("title")
+                        .then(ClientCommandManager.literal("set")
+                            .then(ClientCommandManager.argument("text", StringArgumentType.greedyString())
+                                .executes(context -> setStatsTitle(context.getSource(),
+                                        StringArgumentType.getString(context, "text")))))
+                        .then(ClientCommandManager.literal("show")
+                            .executes(context -> setStatsTitleVisible(context.getSource(), true)))
+                        .then(ClientCommandManager.literal("on")
+                            .executes(context -> setStatsTitleVisible(context.getSource(), true)))
+                        .then(ClientCommandManager.literal("hide")
+                            .executes(context -> setStatsTitleVisible(context.getSource(), false)))
+                        .then(ClientCommandManager.literal("off")
+                            .executes(context -> setStatsTitleVisible(context.getSource(), false)))
+                        .then(ClientCommandManager.literal("reset")
+                            .executes(context -> resetStatsTitle(context.getSource()))))
                     .then(statsToggle("all")))
                 .then(ClientCommandManager.literal("dashboard").executes(context -> {
                     context.getSource().sendFeedback(ChatCraftClient.dashboardMessage());
@@ -351,10 +366,46 @@ public final class ChatCraftCommands {
                 .append(toggleLine("Twitch viewers", config.statsTwitchViewers))
                 .append(toggleLine("YouTube subscribers", config.statsYoutubeSubscribers))
                 .append(toggleLine("YouTube viewers", config.statsYoutubeViewers))
+                .append(Text.literal("Title: ").formatted(Formatting.GRAY))
+                .append(Text.literal(config.statsTitleVisible ? config.statsTitle : "HIDDEN")
+                        .formatted(config.statsTitleVisible ? Formatting.WHITE : Formatting.DARK_GRAY))
+                .append(Text.literal("\n"))
                 .append(Text.literal("/cc stats <stat|all> <true|false>\n").formatted(Formatting.DARK_AQUA))
                 .append(Text.literal("/cc stats twitch|youtube <metric> <true|false>")
-                        .formatted(Formatting.DARK_AQUA));
+                        .formatted(Formatting.DARK_AQUA))
+                .append(Text.literal("\n/cc stats title set|show|hide|reset").formatted(Formatting.DARK_AQUA));
         source.sendFeedback(status);
+        return 1;
+    }
+
+    private static int setStatsTitle(FabricClientCommandSource source, String value) {
+        String title = value.trim();
+        if (title.isEmpty() || title.length() > 32) {
+            error(source, "Stats title must contain 1-32 characters");
+            return 0;
+        }
+        ChatCraftConfig config = ChatCraftConfig.get();
+        config.statsTitle = title;
+        config.statsTitleVisible = true;
+        config.save();
+        success(source, "Stats title set to " + title);
+        return 1;
+    }
+
+    private static int setStatsTitleVisible(FabricClientCommandSource source, boolean visible) {
+        ChatCraftConfig config = ChatCraftConfig.get();
+        config.statsTitleVisible = visible;
+        config.save();
+        success(source, "Stats title " + (visible ? "shown" : "hidden"));
+        return 1;
+    }
+
+    private static int resetStatsTitle(FabricClientCommandSource source) {
+        ChatCraftConfig config = ChatCraftConfig.get();
+        config.statsTitle = "STATS";
+        config.statsTitleVisible = true;
+        config.save();
+        success(source, "Stats title reset to STATS");
         return 1;
     }
 
