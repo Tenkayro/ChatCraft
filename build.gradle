@@ -115,13 +115,6 @@ tasks.register("startPrism", Exec) {
 	group = "custom"
 	description = "Builds and installs ChatCraft, then launches the configured Prism Launcher instance."
 	dependsOn tasks.named("buildToPrismLauncher")
-
-	doFirst {
-		if (!file(prismLauncherExecutable).isFile()) {
-			throw new GradleException("Prism Launcher was not found at: ${prismLauncherExecutable}")
-		}
-	}
-
 	commandLine prismLauncherExecutable, "--launch", prismInstanceId
 }
 
