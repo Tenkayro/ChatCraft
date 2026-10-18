@@ -6,7 +6,9 @@ import de.tenkayro.chatcraft.stats.PlatformStatsService;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.network.packet.c2s.play.ClientStatusC2SPacket;
 import net.minecraft.stat.Stats;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -27,11 +29,33 @@ public final class StatsOverlayRenderer {
     private static final Identifier PLATFORM_ICONS_FONT = Identifier.of("chatcraft", "platform_icons");
     private static final String TWITCH_ICON = "\uE000";
     private static final String YOUTUBE_ICON = "\uE001";
+    private static final int STAT_SYNC_INTERVAL_TICKS = 100;
+    private static ClientPlayNetworkHandler lastNetworkHandler;
+    private static int syncCountdown;
 
     private StatsOverlayRenderer() { }
 
     public static void register() {
         HudRenderCallback.EVENT.register((context, tickCounter) -> render(context));
+    }
+
+    public static void tick(MinecraftClient client) {
+        ClientPlayNetworkHandler networkHandler = client.getNetworkHandler();
+        if (client.player == null || networkHandler == null) {
+            lastNetworkHandler = null;
+            syncCountdown = 0;
+            return;
+        }
+        if (!hasWorldStatsEnabled(ChatCraftConfig.get())) return;
+        if (networkHandler != lastNetworkHandler || syncCountdown-- <= 0) {
+            lastNetworkHandler = networkHandler;
+            syncCountdown = STAT_SYNC_INTERVAL_TICKS;
+            networkHandler.sendPacket(new ClientStatusC2SPacket(ClientStatusC2SPacket.Mode.REQUEST_STATS));
+        }
+    }
+
+    public static void requestWorldStatsRefresh() {
+        syncCountdown = 0;
     }
 
     private static void render(DrawContext context) {
@@ -102,6 +126,11 @@ public final class StatsOverlayRenderer {
                     formatCount(platformStats.youtubeViewers())));
         }
         return rows;
+    }
+
+    private static boolean hasWorldStatsEnabled(ChatCraftConfig config) {
+        return config.statsDeaths || config.statsPlaytime || config.statsMobKills
+                || config.statsPlayerKills || config.statsDistance || config.statsJumps;
     }
 
     private static StatRow row(ClientPlayerEntity player, String label, Identifier statistic) {

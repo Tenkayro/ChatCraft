@@ -71,6 +71,7 @@ public final class ChatCraftClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(backgroundMode::tick);
         ClientTickEvents.END_CLIENT_TICK.register(identity::tick);
         ClientTickEvents.END_CLIENT_TICK.register(ChatCraftCommands::tick);
+        ClientTickEvents.END_CLIENT_TICK.register(StatsOverlayRenderer::tick);
         ClientTickEvents.END_CLIENT_TICK.register(platformStats::tick);
         ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> identity.rewriteLocalName(message));
         ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signedMessage, sender, params, timestamp) -> {

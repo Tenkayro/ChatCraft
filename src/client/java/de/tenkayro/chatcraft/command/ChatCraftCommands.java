@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import de.tenkayro.chatcraft.ChatCraftClient;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.identity.ClientIdentity;
+import de.tenkayro.chatcraft.overlay.StatsOverlayRenderer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -320,6 +321,7 @@ public final class ChatCraftCommands {
             }
         }
         config.save();
+        StatsOverlayRenderer.requestWorldStatsRefresh();
         ChatCraftClient.platformStats().requestRefresh();
         success(source, ("all".equals(stat) ? "Stats" : statLabel(stat))
                 + (visible ? " shown" : " hidden"));
