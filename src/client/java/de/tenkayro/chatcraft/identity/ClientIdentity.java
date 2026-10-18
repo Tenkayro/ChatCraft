@@ -3,9 +3,13 @@ package de.tenkayro.chatcraft.identity;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.yggdrasil.ProfileResult;
 import de.tenkayro.chatcraft.config.ChatCraftConfig;
 import de.tenkayro.chatcraft.dashboard.ActivityLog;
+import de.tenkayro.chatcraft.mixin.PlayerEntityAccessor;
+import de.tenkayro.chatcraft.mixin.PlayerListEntryAccessor;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.util.SkinTextures;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.PlainTextContent;
@@ -31,7 +35,7 @@ public final class ClientIdentity {
 
     private final ActivityLog activity;
     private final AtomicLong skinRequest = new AtomicLong();
-    private volatile SkinTextures skinTextures;
+    private volatile GameProfile skinProfile;
 
     public ClientIdentity(ActivityLog activity) {
         this.activity = activity;
@@ -46,6 +50,7 @@ public final class ClientIdentity {
         ChatCraftConfig config = ChatCraftConfig.get();
         config.clientNickname = nickname;
         config.save();
+        refreshLocalProfile();
         activity.info("Identity", "Client-side nickname set to " + nickname);
         return true;
     }
@@ -54,11 +59,8 @@ public final class ClientIdentity {
         ChatCraftConfig config = ChatCraftConfig.get();
         config.clientNickname = "";
         config.save();
+        refreshLocalProfile();
         activity.info("Identity", "Client-side nickname cleared");
-    }
-
-    public SkinTextures skinTextures() {
-        return skinTextures;
     }
 
     public void loadConfiguredSkin() {
@@ -74,10 +76,11 @@ public final class ClientIdentity {
 
     public void clearSkin() {
         skinRequest.incrementAndGet();
-        skinTextures = null;
+        skinProfile = null;
         ChatCraftConfig config = ChatCraftConfig.get();
         config.clientSkinUsername = "";
         config.save();
+        refreshLocalProfile();
         activity.info("Identity", "Client-side skin override cleared");
     }
 
@@ -87,18 +90,11 @@ public final class ClientIdentity {
                 && client.getSession().getUuidOrNull().equals(profile.getId());
     }
 
-    public GameProfile nicknameProfile(GameProfile original) {
-        String nickname = nickname();
-        if (nickname.isBlank() || original == null) return original;
-        GameProfile renamed = new GameProfile(original.getId(), nickname);
-        renamed.getProperties().putAll(original.getProperties());
-        return renamed;
-    }
-
     public Text rewriteLocalName(Text message) {
         String nickname = nickname();
         String accountName = MinecraftClient.getInstance().getSession().getUsername();
-        if (nickname.isBlank() || accountName.isBlank() || nickname.equals(accountName)) return message;
+        if (nickname.isBlank() || accountName.isBlank() || nickname.equals(accountName)
+                || !message.getString().contains(accountName)) return message;
         return rewriteText(message, accountName, nickname);
     }
 
@@ -141,25 +137,57 @@ public final class ClientIdentity {
 
         HTTP.sendAsync(lookup, HttpResponse.BodyHandlers.ofString())
                 .thenApply(response -> parseProfile(response, username))
-                .thenCompose(profile -> MinecraftClient.getInstance().getSkinProvider().fetchSkinTextures(profile))
-                .whenComplete((textures, error) -> MinecraftClient.getInstance().execute(() -> {
+                .thenApply(ClientIdentity::fillProfileTextures)
+                .thenCompose(profile -> MinecraftClient.getInstance().getSkinProvider().fetchSkinTextures(profile)
+                        .thenApply(textures -> new LoadedSkin(profile, textures)))
+                .whenComplete((loaded, error) -> MinecraftClient.getInstance().execute(() -> {
                     if (request != skinRequest.get()) return;
-                    if (error != null || textures == null) {
+                    if (error != null || loaded == null || loaded.textures == null) {
                         Throwable cause = unwrap(error);
                         activity.error("Identity", "Could not load skin for " + username, cause);
                         notifyPlayer("ChatCraft: could not load skin for " + username + " ("
                                 + safeMessage(cause) + ")");
                         return;
                     }
-                    skinTextures = textures;
+                    skinProfile = loaded.profile;
                     if (persistOnSuccess) {
                         ChatCraftConfig config = ChatCraftConfig.get();
                         config.clientSkinUsername = username;
                         config.save();
                     }
+                    refreshLocalProfile();
                     activity.info("Identity", "Client-side skin loaded from " + username);
                     notifyPlayer("ChatCraft: skin set from " + username);
                 }));
+    }
+
+    public void refreshLocalProfile() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (!client.isOnThread()) {
+            client.execute(this::refreshLocalProfile);
+            return;
+        }
+        if (client.player == null || client.getNetworkHandler() == null) return;
+
+        GameProfile accountProfile = client.getGameProfile();
+        String effectiveName = nickname().isBlank() ? accountProfile.getName() : nickname();
+        GameProfile effectiveProfile = new GameProfile(accountProfile.getId(), effectiveName);
+        effectiveProfile.getProperties().putAll(accountProfile.getProperties());
+        GameProfile selectedSkin = skinProfile;
+        if (selectedSkin != null) {
+            effectiveProfile.getProperties().removeAll("textures");
+            effectiveProfile.getProperties().putAll(
+                    "textures", selectedSkin.getProperties().get("textures"));
+        }
+
+        ((PlayerEntityAccessor) client.player).chatcraft$setGameProfile(effectiveProfile);
+        PlayerListEntry entry = client.getNetworkHandler().getPlayerListEntry(client.player.getUuid());
+        if (entry != null) {
+            PlayerListEntryAccessor accessor = (PlayerListEntryAccessor) entry;
+            accessor.chatcraft$setProfile(effectiveProfile);
+            accessor.chatcraft$setTexturesSupplier(
+                    client.getSkinProvider().getSkinTexturesSupplier(effectiveProfile));
+        }
     }
 
     private static GameProfile parseProfile(HttpResponse<String> response, String requestedName) {
@@ -177,6 +205,15 @@ public final class ClientIdentity {
                 "([0-9a-fA-F]{8})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{12})",
                 "$1-$2-$3-$4-$5");
         return new GameProfile(UUID.fromString(uuid), name);
+    }
+
+    private static GameProfile fillProfileTextures(GameProfile profile) {
+        ProfileResult result = MinecraftClient.getInstance().getSessionService().fetchProfile(profile.getId(), true);
+        if (result == null || result.profile() == null
+                || result.profile().getProperties().get("textures").isEmpty()) {
+            throw new CompletionException(new IllegalStateException("Minecraft profile has no usable skin data"));
+        }
+        return result.profile();
     }
 
     private static Throwable unwrap(Throwable error) {
@@ -200,4 +237,6 @@ public final class ClientIdentity {
     public static boolean isValidName(String value) {
         return value != null && VALID_NAME.matcher(value).matches();
     }
+
+    private record LoadedSkin(GameProfile profile, SkinTextures textures) { }
 }

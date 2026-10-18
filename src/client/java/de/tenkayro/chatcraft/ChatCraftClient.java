@@ -21,6 +21,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -65,7 +66,15 @@ public final class ChatCraftClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(input::tick);
         ClientTickEvents.END_CLIENT_TICK.register(backgroundMode::tick);
         ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> identity.rewriteLocalName(message));
+        ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signedMessage, sender, params, timestamp) -> {
+            if (sender == null || !identity.isLocalProfile(sender)) return true;
+            Text rewritten = identity.rewriteLocalName(message);
+            if (rewritten == message) return true;
+            MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(rewritten);
+            return false;
+        });
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            identity.refreshLocalProfile();
             if (client.player != null) client.player.sendMessage(dashboardMessage(), false);
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> input.releaseAll());

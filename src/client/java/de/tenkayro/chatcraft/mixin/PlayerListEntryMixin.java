@@ -4,7 +4,6 @@ import com.mojang.authlib.GameProfile;
 import de.tenkayro.chatcraft.ChatCraftClient;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.util.SkinTextures;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.text.Text;
@@ -19,12 +18,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class PlayerListEntryMixin {
     @Shadow @Final private GameProfile profile;
 
-    @Inject(method = "getProfile", at = @At("HEAD"), cancellable = true)
-    private void chatcraft$useClientNicknameProfile(CallbackInfoReturnable<GameProfile> callback) {
-        if (!isLocalEntry()) return;
-        callback.setReturnValue(ChatCraftClient.identity().nicknameProfile(profile));
-    }
-
     @Inject(method = "getDisplayName", at = @At("HEAD"), cancellable = true)
     private void chatcraft$useClientNicknameDisplay(CallbackInfoReturnable<Text> callback) {
         if (!isLocalEntry()) return;
@@ -37,18 +30,11 @@ public abstract class PlayerListEntryMixin {
         if (isLocalEntry()) callback.setReturnValue(getOriginalTeam());
     }
 
-    @Inject(method = "getSkinTextures", at = @At("HEAD"), cancellable = true)
-    private void chatcraft$useClientSkin(CallbackInfoReturnable<SkinTextures> callback) {
-        if (!isLocalEntry()) return;
-        SkinTextures textures = ChatCraftClient.identity().skinTextures();
-        if (textures != null) callback.setReturnValue(textures);
-    }
-
     private Team getOriginalTeam() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.world == null) return null;
         Scoreboard scoreboard = client.world.getScoreboard();
-        return scoreboard.getScoreHolderTeam(profile.getName());
+        return scoreboard.getScoreHolderTeam(client.getSession().getUsername());
     }
 
     private boolean isLocalEntry() {

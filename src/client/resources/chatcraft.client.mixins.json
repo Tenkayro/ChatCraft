@@ -11,6 +11,8 @@
     "MouseAccessor",
     "MouseMixin",
     "PlayerEntityMixin",
+    "PlayerEntityAccessor",
+    "PlayerListEntryAccessor",
     "PlayerListEntryMixin",
     "RecipeAlternativesWidgetAccessor",
     "RecipeBookResultsAccessor",
